@@ -115,6 +115,7 @@ static void cpu_features_detect()
   pll_hardware.popcnt_present  = __builtin_cpu_supports("popcnt");
   pll_hardware.avx_present     = __builtin_cpu_supports("avx");
   pll_hardware.avx2_present    = __builtin_cpu_supports("avx2");
+  pll_hardware.avx512f_present = _FEATURE_AVX512F;
 #endif
 }
 
@@ -145,6 +146,8 @@ static void cpu_features_show()
     fprintf(stderr, " avx");
   if (pll_hardware.avx2_present)
     fprintf(stderr, " avx2");
+  if (pll_hardware.avx512f_present)
+    fprintf(stderr, " avx512f");
   fprintf(stderr, "\n");
 }
 
@@ -178,4 +181,5 @@ PLL_EXPORT void pll_hardware_ignore()
   pll_hardware.popcnt_present  = 1;
   pll_hardware.avx_present     = 1;
   pll_hardware.avx2_present    = 1;
+  pll_hardware.avx512f_present = 1;
 }

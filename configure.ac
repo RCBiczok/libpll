@@ -50,12 +50,14 @@ AC_FUNC_ALLOCA
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([asprintf memcpy memset posix_memalign])
 
+have_avx512f=no
 have_avx2=no
 have_avx=no
 have_sse3=no
 have_ps2pdf=no
 
 # Compile-time detection of processor features - now disabled
+#TODO: No detection fo AVX512F yet
 #AX_EXT
 #
 #if test "x${ax_cv_have_fma3_ext}" = "xyes"; then
@@ -114,6 +116,13 @@ AS_IF([test "x$enable_avx2" != "xno"], [
   AC_DEFINE([HAVE_AVX2], [1], [Define to 1 to support Advanced Vector Extensions 2])
 ])
 
+AC_ARG_ENABLE(avx512f, AS_HELP_STRING([--disable-avx512f], [Build without AVX512F support]))
+AS_IF([test "x$enable_avx512f" != "xno"], [
+  have_avx512f=yes
+  AC_DEFINE([HAVE_AVX512F], [1], [Define to 1 to support Advanced Vector Extensions 512 Foundation])
+])
+
+AM_CONDITIONAL(HAVE_AVX512F, test "x${have_avx512f}" = "xyes")
 AM_CONDITIONAL(HAVE_AVX2, test "x${have_avx2}" = "xyes")
 AM_CONDITIONAL(HAVE_AVX, test "x${have_avx}" = "xyes")
 AM_CONDITIONAL(HAVE_SSE3, test "x${have_sse3}" = "xyes")
