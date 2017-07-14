@@ -6,7 +6,8 @@ src/lex_rtree.c
 src/lex_utree.c
 src/parse_phylip.h
 cmake-build-debug
-Makefile
+/Makefile
+/src/Makefile
 Makefile.in
 aclocal.m4
 compile

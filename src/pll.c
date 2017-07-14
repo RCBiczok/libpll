@@ -455,7 +455,7 @@ PLL_EXPORT pll_partition_t * pll_partition_create(unsigned int tips,
   if (attributes & PLL_ATTRIB_ARCH_AVX512F && PLL_STAT(avx512f_present))
   {
     partition->alignment = PLL_ALIGNMENT_AVX512F;
-    partition->states_padded = (states+3) & 0xFFFFFFFC;
+    partition->states_padded = (states+7) & (0xFFFFFFFF - 7);
   }
 #endif
 

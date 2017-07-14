@@ -40,16 +40,20 @@ import time
 #####################
 #   Configuration   #
 #####################
-do_memtest       =  1                 # Evaluate memory leaks
-num_replicates   = 20                 # Number of samples for the speed test
-all_args         = [0,1,2,3,4,5,8,9]  # 0: No vector / No tip pattern
-                                      # 1: No vector / Tip pattern
-                                      # 2: AVX / No tip pattern
-                                      # 3: AVX / Tip pattern
-                                      # 4: SSE / No tip pattern
-                                      # 5: SSE / Tip pattern
-                                      # 8: AVX2 / No tip pattern
-                                      # 9: AVX2 / Tip pattern
+do_memtest       =  1                       # Evaluate memory leaks
+num_replicates   = 20                       # Number of samples for the speed test
+#all_args         = [0,1,2,3,4,5,8,9,16,17] # 0: No vector / No tip pattern
+                                            # 1: No vector / Tip pattern
+                                            # 2: AVX / No tip pattern
+                                            # 3: AVX / Tip pattern
+                                            # 4: SSE / No tip pattern
+                                            # 5: SSE / Tip pattern
+                                            # 8: AVX2 / No tip pattern
+                                            # 9: AVX2 / Tip pattern
+                                            # 16: AVX512f / No tip pattern
+                                            # 17: AVX512f / Tip pattern
+
+all_args         = [8, 16]
 #####################
 
 colors={"default":"",
@@ -164,6 +168,10 @@ def runSpeedTest(files):
           attrib += " avx2"
           attribstr += " AVX2"
           typestr   += "F"
+      elif (args & 16):
+          attrib += " avx512f"
+          attribstr += " AVX512F"
+          typestr   += "G"
       else:
           attribstr += " CPU"
           typestr   += "C"
@@ -292,6 +300,10 @@ def runValidation(files):
           attrib    += " avx2"
           attribstr += " AVX2"
           typestr   += "F"
+      elif (args & 16):
+          attrib += " avx512f"
+          attribstr += " AVX512F"
+          typestr   += "G"
       else:
         attribstr += " CPU"
         typestr   += "C"
@@ -405,6 +417,9 @@ if __name__ == "__main__":
     files=[f for f in files if os.stat("obj/"+f).st_mode & xmod]
   else:
     files=sys.argv[2:]
+
+##TODO only temporary
+  files = ["00001_matrix_calc"]
 
   files.sort()
 

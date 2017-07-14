@@ -115,7 +115,7 @@ static void cpu_features_detect()
   pll_hardware.popcnt_present  = __builtin_cpu_supports("popcnt");
   pll_hardware.avx_present     = __builtin_cpu_supports("avx");
   pll_hardware.avx2_present    = __builtin_cpu_supports("avx2");
-  pll_hardware.avx512f_present = _FEATURE_AVX512F;
+  pll_hardware.avx512f_present = __builtin_cpu_supports("avx512f");
 #endif
 }
 
