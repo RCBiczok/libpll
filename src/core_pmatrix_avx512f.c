@@ -130,6 +130,9 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
   free(transposed);
 
   __m512i permute_mask = _mm512_setr_epi64(0|4, 0|5, 0|6, 0|7, 8|0, 8|1, 8|2, 8|3);
+  __m512i permute_mask_final_stage = _mm512_setr_epi64(0|2, 0|3, 8|0, 8|1, 0|6, 0|7, 8|4, 8|5);
+
+  __m512d log_2 = _mm512_set1_pd(log(2));
 
   __m512d xmm0,xmm1,xmm2,xmm3,xmm4,xmm5,xmm6;
   __m512d ymm0,ymm1,ymm2,ymm3,ymm4,ymm5,ymm6;
@@ -187,11 +190,13 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
           xmm5 = _mm512_div_pd(xmm5,xmm6);
         }
 
-        _mm512_store_pd(expd+k*ELEM_PER_AVX515_REGISTER,xmm5);
+        xmm5 = _mm512_div_pd(xmm5, log_2);
+        xmm5 = _mm512_exp2a23_pd(xmm5);
+        _mm512_store_pd(expd+k*ELEM_PER_AVX515_REGISTER, xmm5);
       }
 
-      for (k = 0; k < STATES_PADDED; ++k)
-        expd[k] = exp(expd[k]);
+      /*for (k = 0; k < STATES; ++k)
+        expd[k] = exp(expd[k]);*/
 
       /* load expd */
       xmm4 = _mm512_load_pd(expd+0);
@@ -265,7 +270,7 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
 
 
           zmm2 = _mm512_add_pd(_mm512_permutex2var_pd(zmm0,
-                                                      _mm512_setr_epi64(0|2, 0|3, 8|0, 8|1, 0|6, 0|7, 8|4, 8|5),
+                                                      permute_mask_final_stage,
                                                       zmm1),
                                _mm512_mask_blend_pd(0xCC, zmm0, zmm1));
 
