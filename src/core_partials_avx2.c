@@ -21,6 +21,13 @@
 
 #include "pll.h"
 
+void print256d_num(__m256d var)
+{
+  double *val = (double*) &var;
+  printf("% f % f % f % f\n",
+         val[3], val[2], val[1], val[0]);
+}
+
 static void fill_parent_scaler(unsigned int sites,
                                unsigned int * parent_scaler,
                                const unsigned int * left_scaler,

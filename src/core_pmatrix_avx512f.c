@@ -131,8 +131,8 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
 
   __m512i permute_mask = _mm512_setr_epi64(0|4, 0|5, 0|6, 0|7, 8|0, 8|1, 8|2, 8|3);
 
-  __m512d xmm0,xmm1,xmm2,xmm3,xmm4,xmm5,xmm6,xmm7,xmm8;
-  __m512d ymm0,ymm1,ymm2,ymm3,ymm4,ymm5,ymm6,ymm7,ymm8,ymm9;
+  __m512d xmm0,xmm1,xmm2,xmm3,xmm4,xmm5,xmm6;
+  __m512d ymm0,ymm1,ymm2,ymm3,ymm4,ymm5,ymm6;
   __m512d zmm0,zmm1,zmm2,zmm3,zmm4,zmm5,zmm6,zmm7;
 
   double * tran = NULL;
@@ -205,13 +205,13 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
         ymm1 = _mm512_load_pd(inv_evecs+k+8);
         ymm2 = _mm512_load_pd(inv_evecs+k+16);
 
-        ymm5 = _mm512_mul_pd(xmm4,ymm0);
-        ymm6 = _mm512_mul_pd(xmm5,ymm1);
-        ymm7 = _mm512_mul_pd(xmm6,ymm2);
+        ymm4 = _mm512_mul_pd(xmm4,ymm0);
+        ymm5 = _mm512_mul_pd(xmm5,ymm1);
+        ymm6 = _mm512_mul_pd(xmm6,ymm2);
 
-        _mm512_store_pd(temp+k+0,ymm5);
-        _mm512_store_pd(temp+k+8,ymm6);
-        _mm512_store_pd(temp+k+16,ymm7);
+        _mm512_store_pd(temp+k+0,ymm4);
+        _mm512_store_pd(temp+k+8,ymm5);
+        _mm512_store_pd(temp+k+16,ymm6);
       }
 
       for (j = 0; j < STATES_PADDED*STATES; j += STATES_PADDED)
@@ -219,7 +219,6 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
         xmm4 = _mm512_load_pd(temp+j+0);
         xmm5 = _mm512_load_pd(temp+j+8);
         xmm6 = _mm512_load_pd(temp+j+16);
-        //xmm6 = _mm512_insertf64x4(xmm6, _mm256_setzero_pd(), 1);
 
         /* process four rows at a time */
         for (k = 0; k < STATES_PADDED*STATES_PADDED; k += STATES_PADDED*8)
@@ -258,53 +257,23 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
           ymm3 = _mm512_add_pd(_mm512_unpackhi_pd(zmm6,zmm7),
                                _mm512_unpacklo_pd(zmm6,zmm7));
 
-          /*printf("ymm0:");
-          print512d_num(ymm0);
-          printf("ymm1:");
-          print512d_num(ymm1);
-          printf("ymm2:");
-          print512d_num(ymm2);
-          printf("ymm3:");
-          print512d_num(ymm3);
+          zmm0 = _mm512_add_pd(_mm512_permutex2var_pd(ymm0, permute_mask, ymm2),
+                               _mm512_mask_blend_pd(0xF0, ymm0, ymm2));
 
-          printf("============\n");*/
+          zmm1 = _mm512_add_pd(_mm512_permutex2var_pd(ymm1, permute_mask, ymm3),
+                               _mm512_mask_blend_pd(0xF0, ymm1, ymm3));
 
-          zmm0 = _mm512_add_pd(_mm512_permutex2var_pd(ymm0, permute_mask, ymm1),
-                               _mm512_mask_blend_pd(0xF0, ymm0, ymm1));
-
-          zmm1 = _mm512_add_pd(_mm512_permutex2var_pd(ymm2, permute_mask, ymm3),
-                               _mm512_mask_blend_pd(0xF0, ymm2, ymm3));
-
-          //printf("zmm0:");
-          //print512d_num(zmm0);
-          //printf("zmm1:");
-          //print512d_num(zmm1);
-
-          //printf("permute:");
-          /*print512d_num(_mm512_permutex2var_pd(zmm0,
-                                               _mm512_setr_epi64(0|2, 0|3, 8|0, 8|1, 0|6, 0|7, 8|4, 8|5),
-                                               zmm1));*/
 
           zmm2 = _mm512_add_pd(_mm512_permutex2var_pd(zmm0,
                                                       _mm512_setr_epi64(0|2, 0|3, 8|0, 8|1, 0|6, 0|7, 8|4, 8|5),
                                                       zmm1),
                                _mm512_mask_blend_pd(0xCC, zmm0, zmm1));
 
-          zmm2 = _mm512_permutex2var_pd(zmm2,
-                                        _mm512_setr_epi64(8|0, 8|1, 8|4, 8|5, 8|2, 8|3, 8|6, 8|7),
-                                        zmm2);
           _mm512_store_pd(pmat, zmm2);
 
           pmat += ELEM_PER_AVX515_REGISTER;
-
-          //printf("result");
-          //print512d_num(zmm2);
         }
       }
-      /*for(int ii = 0; ii < STATES_PADDED*STATES_PADDED; ii++) {
-        printf("%d: %f\n", ii, pmatrix[matrix_indices[i]][ii]);
-      }
-      exit(0);*/
     }
   }
 
