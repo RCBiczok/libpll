@@ -214,8 +214,6 @@ typedef struct pll_partition
   unsigned int scale_buffers;
   unsigned int attributes;
 
-  const unsigned int * map;
-
   /* vectorization options */
   size_t alignment;
   unsigned int states_padded;
@@ -1194,7 +1192,8 @@ PLL_EXPORT void pll_core_update_partial_ti_20x20_avx(unsigned int sites,
                                                      const double * right_matrix,
                                                      const unsigned int * right_scaler,
                                                      const unsigned int * tipmap,
-                                                     unsigned int tipmap_size);
+                                                     unsigned int tipmap_size,
+                                                     unsigned int attrib);
 
 PLL_EXPORT void pll_core_update_partial_ii_avx(unsigned int states,
                                                unsigned int sites,
@@ -1250,7 +1249,8 @@ void pll_core_update_partial_ti_20x20_avx2(unsigned int sites,
                                            const double * right_matrix,
                                            const unsigned int * right_scaler,
                                            const unsigned int * tipmap,
-                                           unsigned int tipmap_size);
+                                           unsigned int tipmap_size,
+                                           unsigned int attrib);
 
 PLL_EXPORT void pll_core_update_partial_ii_avx2(unsigned int states,
                                                 unsigned int sites,
@@ -1409,7 +1409,8 @@ double pll_core_edge_loglikelihood_ii_sse(unsigned int states,
                                           const double * invar_proportion,
                                           const int * invar_indices,
                                           const unsigned int * freqs_indices,
-                                          double * persite_lnl);
+                                          double * persite_lnl,
+                                          unsigned int attrib);
 
 PLL_EXPORT
 double pll_core_edge_loglikelihood_ii_4x4_sse(unsigned int sites,
@@ -1443,7 +1444,8 @@ double pll_core_edge_loglikelihood_ti_sse(unsigned int states,
                                           const double * invar_proportion,
                                           const int * invar_indices,
                                           const unsigned int * freqs_indices,
-                                          double * persite_lnl);
+                                          double * persite_lnl,
+                                          unsigned int attrib);
 
 PLL_EXPORT
 double pll_core_edge_loglikelihood_ti_4x4_sse(unsigned int sites,
@@ -1504,7 +1506,8 @@ PLL_EXPORT double pll_core_edge_loglikelihood_ii_avx(unsigned int states,
                                                      const double * invar_proportion,
                                                      const int * invar_indices,
                                                      const unsigned int * freqs_indices,
-                                                     double * persite_lnl);
+                                                     double * persite_lnl,
+                                                     unsigned int attrib);
 
 PLL_EXPORT double pll_core_edge_loglikelihood_ii_4x4_avx(unsigned int sites,
                                                          unsigned int rate_cats,
@@ -1551,7 +1554,8 @@ PLL_EXPORT double pll_core_edge_loglikelihood_ti_20x20_avx(unsigned int sites,
                                                            const double * invar_proportion,
                                                            const int * invar_indices,
                                                            const unsigned int * freqs_indices,
-                                                           double * persite_lnl);
+                                                           double * persite_lnl,
+                                                           unsigned int attrib);
 
 PLL_EXPORT double pll_core_edge_loglikelihood_ti_avx(unsigned int states,
                                                      unsigned int sites,
@@ -1567,7 +1571,8 @@ PLL_EXPORT double pll_core_edge_loglikelihood_ti_avx(unsigned int states,
                                                      const double * invar_proportion,
                                                      const int * invar_indices,
                                                      const unsigned int * freqs_indices,
-                                                     double * persite_lnl);
+                                                     double * persite_lnl,
+                                                     unsigned int attrib);
 
 PLL_EXPORT double pll_core_root_loglikelihood_4x4_avx(unsigned int sites,
                                                       unsigned int rate_cats,
@@ -1628,7 +1633,8 @@ double pll_core_edge_loglikelihood_ti_20x20_avx2(unsigned int sites,
                                                  const double * invar_proportion,
                                                  const int * invar_indices,
                                                  const unsigned int * freqs_indices,
-                                                 double * persite_lnl);
+                                                 double * persite_lnl,
+                                                 unsigned int attrib);
 
 
 PLL_EXPORT
@@ -1646,7 +1652,8 @@ double pll_core_edge_loglikelihood_ii_avx2(unsigned int states,
                                            const double * invar_proportion,
                                            const int * invar_indices,
                                            const unsigned int * freqs_indices,
-                                           double * persite_lnl);
+                                           double * persite_lnl,
+                                           unsigned int attrib);
 #endif
 
 /* functions in core_pmatrix.c */
