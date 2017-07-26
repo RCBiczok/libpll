@@ -46,12 +46,24 @@ static pll_partition_t *part_nt, *part_aa, *part_odd;
 
 void check_matrix(pll_partition_t * p, unsigned int matrix_index)
 {
-  const double * mat = p->pmatrix[matrix_index];
-  unsigned int i;
-  for (i = 0; i < p->rate_cats * p->states_padded * p->states; ++i)
+  unsigned int i,j,k;
+  double * pmatrix;
+  unsigned int states = p->states;
+  unsigned int states_padded = p->states_padded;
+
+  for (k = 0; k < p->rate_cats; ++k)
   {
-    if (isnan(mat[i]) || !isfinite(mat[i]) || mat[i] < 0.)
-      fatal("ERROR invalid value in p-matrix %u: %lf\n", matrix_index, mat[i]);
+    pmatrix = p->pmatrix[matrix_index] + k*states*states_padded;
+    for (i = 0; i < p->states; ++i)
+    {
+      for (j = 0; j < states; ++j)
+      {
+        if (isnan(pmatrix[i*states_padded+j]) ||
+                !isfinite(pmatrix[i*states_padded+j]) ||
+                pmatrix[i*states_padded+j] < 0.)
+          fatal("ERROR invalid value in p-matrix (%u,%u,%u): %lf\n", k,i,j,pmatrix[i*states_padded+j]);
+      }
+    }
   }
 }
 
@@ -229,7 +241,8 @@ int main(int argc, char * argv[])
 
   init(attributes);
 
-  pll_partition_t * parts[] = {part_nt, part_aa, part_odd};
+  //pll_partition_t * parts[] = {part_nt, part_aa, part_odd};
+  pll_partition_t * parts[] = {part_aa};
 
   for (i = 0; i < 3; ++i)
   {
