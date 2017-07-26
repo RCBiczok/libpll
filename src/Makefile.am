@@ -43,7 +43,7 @@ libpll_la_CFLAGS = $(AM_CFLAGS)
 
 # To allow cross-compilation, those SIMD flags will be used for the respective source files only
 #TODO diferentialte flag settings
-AVX512FFLAGS=-mavx512f -mavx512er
+AVX512FFLAGS=-mavx512f
 #AVX512FFLAGS=-xCOMMON-AVX512
 AVX2FLAGS=-mfma -mavx2
 AVXFLAGS=-mavx

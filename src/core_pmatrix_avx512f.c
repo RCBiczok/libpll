@@ -21,31 +21,6 @@
 
 #include "pll.h"
 
-
-void print512d_num(__m512d var)
-{
-  double *val = (double*) &var;
-  printf("% f % f % f % f % f % f % f % f\n",
-         val[7], val[6], val[5], val[4],
-         val[3], val[2], val[1], val[0]);
-}
-
-void check_minus(__m512d var)
-{
-  double *val = (double*) &var;
-  if(val[0] < 0 ||
-     val[1] < 0 ||
-     val[2] < 0 ||
-     val[3] < 0 ||
-     val[4] < 0 ||
-     val[5] < 0 ||
-     val[6] < 0 ||
-     val[7] < 0) {
-    printf("Negative value:");
-    print512d_num(var);
-  }
-}
-
 #define ELEM_PER_AVX515_REGISTER 8
 #define STATES 20
 #define STATES_PADDED 24
@@ -148,8 +123,6 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
   __m512i permute_mask = _mm512_setr_epi64(0|4, 0|5, 0|6, 0|7, 8|0, 8|1, 8|2, 8|3);
   __m512i permute_mask_final_stage = _mm512_setr_epi64(0|2, 0|3, 8|0, 8|1, 0|6, 0|7, 8|4, 8|5);
 
-  __m512d log_2 = _mm512_set1_pd(log(2));
-
   __m512d xmm0,xmm1,xmm2,xmm3,xmm4,xmm5,xmm6;
   __m512d ymm0,ymm1,ymm2,ymm3,ymm4,ymm5,ymm6;
   __m512d zmm0,zmm1,zmm2,zmm3,zmm4,zmm5,zmm6,zmm7;
@@ -191,8 +164,6 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
       if (pinvar > PLL_MISC_EPSILON)
         xmm6 = _mm512_set1_pd(1.0 - pinvar);
 
-      printf("NUMNUTS");
-
       for (k = 0; k < STATES_PADDED/ELEM_PER_AVX515_REGISTER; ++k)
       {
         xmm1 = _mm512_load_pd(evals+k*ELEM_PER_AVX515_REGISTER);
@@ -208,15 +179,11 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
           xmm5 = _mm512_div_pd(xmm5,xmm6);
         }
 
-        xmm5 = _mm512_div_pd(xmm5, log_2);
-        xmm5 = _mm512_exp2a23_pd(xmm5);
-        printf("NUMNUTS");
-        check_minus(xmm5);
         _mm512_store_pd(expd+k*ELEM_PER_AVX515_REGISTER, xmm5);
       }
 
-      /*for (k = 0; k < STATES; ++k)
-        expd[k] = exp(expd[k]);*/
+      for (k = 0; k < STATES; ++k)
+        expd[k] = expm1(expd[k]);
 
       /* load expd */
       xmm4 = _mm512_load_pd(expd+0);
@@ -299,6 +266,15 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
           pmat += ELEM_PER_AVX515_REGISTER;
         }
       }
+
+      /* add identity matrix */
+      pmat -= STATES_PADDED*STATES;
+      for (j = 0; j < 20; ++j)
+      {
+        pmat[j] += 1.0;
+        pmat += STATES_PADDED;
+      }
+
     }
   }
 
