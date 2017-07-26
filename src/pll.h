@@ -81,6 +81,7 @@
 #define PLL_ALIGNMENT_CPU   8
 #define PLL_ALIGNMENT_SSE  16
 #define PLL_ALIGNMENT_AVX  32
+#define PLL_ALIGNMENT_AVX512F  64
 
 #define PLL_LINEALLOC 2048
 
@@ -107,7 +108,7 @@
 #define PLL_ATTRIB_ARCH_SSE       (1 << 0)
 #define PLL_ATTRIB_ARCH_AVX       (1 << 1)
 #define PLL_ATTRIB_ARCH_AVX2      (1 << 2)
-#define PLL_ATTRIB_ARCH_AVX512    (1 << 3)
+#define PLL_ATTRIB_ARCH_AVX512F   (1 << 3)
 #define PLL_ATTRIB_ARCH_MASK         0xF
 
 #define PLL_ATTRIB_PATTERN_TIP    (1 << 4)
@@ -195,6 +196,7 @@ typedef struct pll_hardware_s
   int popcnt_present;
   int avx_present;
   int avx2_present;
+  int avx512f_present;
 
   /* TODO: add chip,core,mem info */
 } pll_hardware_t;
@@ -1673,6 +1675,20 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
                                        unsigned int attrib);
 
 /* functions in core_pmatrix_avx2.c */
+
+#ifdef HAVE_AVX512F
+PLL_EXPORT int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
+                                                     unsigned int rate_cats,
+                                                     const double * rates,
+                                                     const double * branch_lengths,
+                                                     const unsigned int * matrix_indices,
+                                                     const unsigned int * params_indices,
+                                                     const double * prop_invar,
+                                                     double * const * eigenvals,
+                                                     double * const * eigenvecs,
+                                                     double * const * inv_eigenvecs,
+                                                     unsigned int count);
+#endif
 
 #ifdef HAVE_AVX2
 PLL_EXPORT int pll_core_update_pmatrix_20x20_avx2(double ** pmatrix,
