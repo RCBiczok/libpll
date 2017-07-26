@@ -176,7 +176,7 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
     }
     /* this line is never called, but should we disable the else case above,
        then states_padded must be set to this value */
-    states_padded = (states+3) & 0xFFFFFFFC;
+    states_padded = (states+7) & (0xFFFFFFFC - 7);
   }
   #endif
 
