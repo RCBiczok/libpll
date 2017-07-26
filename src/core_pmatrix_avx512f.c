@@ -30,6 +30,22 @@ void print512d_num(__m512d var)
          val[3], val[2], val[1], val[0]);
 }
 
+void check_minus(__m512d var)
+{
+  double *val = (double*) &var;
+  if(val[0] < 0 ||
+     val[1] < 0 ||
+     val[2] < 0 ||
+     val[3] < 0 ||
+     val[4] < 0 ||
+     val[5] < 0 ||
+     val[6] < 0 ||
+     val[7] < 0) {
+    printf("Negative value:");
+    print512d_num(var);
+  }
+}
+
 #define ELEM_PER_AVX515_REGISTER 8
 #define STATES 20
 #define STATES_PADDED 24
@@ -175,6 +191,8 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
       if (pinvar > PLL_MISC_EPSILON)
         xmm6 = _mm512_set1_pd(1.0 - pinvar);
 
+      printf("NUMNUTS");
+
       for (k = 0; k < STATES_PADDED/ELEM_PER_AVX515_REGISTER; ++k)
       {
         xmm1 = _mm512_load_pd(evals+k*ELEM_PER_AVX515_REGISTER);
@@ -192,6 +210,8 @@ int pll_core_update_pmatrix_20x20_avx512f(double ** pmatrix,
 
         xmm5 = _mm512_div_pd(xmm5, log_2);
         xmm5 = _mm512_exp2a23_pd(xmm5);
+        printf("NUMNUTS");
+        check_minus(xmm5);
         _mm512_store_pd(expd+k*ELEM_PER_AVX515_REGISTER, xmm5);
       }
 
