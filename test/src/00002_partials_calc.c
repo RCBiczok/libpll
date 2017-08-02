@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
 
   const char *ref_seq = "PIGLRVTLRRDRMWI";
 
-  size_t align_size = 1000000 * strlen(ref_seq);
+  size_t align_size = 1000 * strlen(ref_seq);
   size_t align_seqs = 5;
 
   char** align = calloc(align_seqs, sizeof(char*));
@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
   pll_set_category_rates(partition, rate_cats);
 
   pll_update_prob_matrices(partition, params_indices, matrix_indices, branch_lengths, 4);
+  for(int i = 0; i < 100000; i++)
   pll_update_partials(partition, operations, 3);
 
   for (j = 0; j < 4; ++j) {
