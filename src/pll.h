@@ -1266,6 +1266,50 @@ PLL_EXPORT void pll_core_update_partial_ii_avx2(unsigned int states,
                                                 unsigned int attrib);
 #endif
 
+/* functions in core_partials_avx512f.c */
+
+#ifdef HAVE_AVX512F
+PLL_EXPORT void pll_core_update_partial_ti_avx512f(unsigned int states,
+                                                   unsigned int sites,
+                                                   unsigned int rate_cats,
+                                                   double * parent_clv,
+                                                   unsigned int * parent_scaler,
+                                                   const unsigned char * left_tipchars,
+                                                   const double * right_clv,
+                                                   const double * left_matrix,
+                                                   const double * right_matrix,
+                                                   const unsigned int * right_scaler,
+                                                   const unsigned int * tipmap,
+                                                   unsigned int tipmap_size,
+                                                   unsigned int attrib);
+
+PLL_EXPORT
+void pll_core_update_partial_ti_20x20_avx512f(unsigned int sites,
+                                              unsigned int rate_cats,
+                                              double * parent_clv,
+                                              unsigned int * parent_scaler,
+                                              const unsigned char * left_tipchar,
+                                              const double * right_clv,
+                                              const double * left_matrix,
+                                              const double * right_matrix,
+                                              const unsigned int * right_scaler,
+                                              const unsigned int * tipmap,
+                                              unsigned int tipmap_size,
+                                              unsigned int attrib);
+
+PLL_EXPORT void pll_core_update_partial_ii_avx512f(unsigned int states,
+                                                   unsigned int sites,
+                                                   unsigned int rate_cats,
+                                                   double * parent_clv,
+                                                   unsigned int * parent_scaler,
+                                                   const double * left_clv,
+                                                   const double * right_clv,
+                                                   const double * left_matrix,
+                                                   const double * right_matrix,
+                                                   const unsigned int * left_scaler,
+                                                   const unsigned int * right_scaler,
+                                                   unsigned int attrib);
+#endif
 
 /* functions in core_derivatives_sse.c */
 

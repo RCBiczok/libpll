@@ -21,33 +21,32 @@
 
 #include "pll.h"
 
-PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
+PLL_EXPORT int pll_core_update_pmatrix(double **pmatrix,
                                        unsigned int states,
                                        unsigned int rate_cats,
-                                       const double * rates,
-                                       const double * branch_lengths,
-                                       const unsigned int * matrix_indices,
-                                       const unsigned int * params_indices,
-                                       const double * prop_invar,
-                                       double * const * eigenvals,
-                                       double * const * eigenvecs,
-                                       double * const * inv_eigenvecs,
+                                       const double *rates,
+                                       const double *branch_lengths,
+                                       const unsigned int *matrix_indices,
+                                       const unsigned int *params_indices,
+                                       const double *prop_invar,
+                                       double *const *eigenvals,
+                                       double *const *eigenvecs,
+                                       double *const *inv_eigenvecs,
                                        unsigned int count,
-                                       unsigned int attrib)
-{
-  unsigned int i,n,j,k,m;
+                                       unsigned int attrib) {
+  unsigned int i, n, j, k, m;
   unsigned int states_padded = states;
-  double * expd;
-  double * temp;
+  double *expd;
+  double *temp;
 
   double pinvar;
-  double * evecs;
-  double * inv_evecs;
-  double * evals;
-  double * pmat;
+  double *evecs;
+  double *inv_evecs;
+  double *evals;
+  double *pmat;
 
 
-  #ifdef HAVE_SSE3
+#ifdef HAVE_SSE3
   if (attrib & PLL_ATTRIB_ARCH_SSE && PLL_STAT(sse3_present))
   {
     if (states == 4)
@@ -68,8 +67,8 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
        then states_padded must be set to this value */
     states_padded = (states+1) & 0xFFFFFFFE;
   }
-  #endif
-  #ifdef HAVE_AVX
+#endif
+#ifdef HAVE_AVX
   if (attrib & PLL_ATTRIB_ARCH_AVX && PLL_STAT(avx_present))
   {
     if (states == 4)
@@ -104,8 +103,8 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
        then states_padded must be set to this value */
     states_padded = (states+3) & 0xFFFFFFFC;
   }
-  #endif
-  #ifdef HAVE_AVX2
+#endif
+#ifdef HAVE_AVX2
   if (attrib & PLL_ATTRIB_ARCH_AVX2 && PLL_STAT(avx2_present))
   {
     if (states == 4)
@@ -141,8 +140,8 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
        then states_padded must be set to this value */
     states_padded = (states+3) & 0xFFFFFFFC;
   }
-  #endif
-  #ifdef HAVE_AVX512F
+#endif
+#ifdef HAVE_AVX512F
   if (attrib & PLL_ATTRIB_ARCH_AVX512F && PLL_STAT(avx512f_present))
   {
     if (states == 4)
@@ -176,15 +175,14 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
     }
     /* this line is never called, but should we disable the else case above,
        then states_padded must be set to this value */
-    states_padded = (states+7) & (0xFFFFFFFC - 7);
+    states_padded = (states+7) & (0xFFFFFFFF - 7);
   }
-  #endif
+#endif
 
-  expd = (double *)malloc(states * sizeof(double));
-  temp = (double *)malloc(states*states*sizeof(double));
+  expd = (double *) malloc(states * sizeof(double));
+  temp = (double *) malloc(states * states * sizeof(double));
 
-  if (!expd || !temp)
-  {
+  if (!expd || !temp) {
     if (expd) free(expd);
     if (temp) free(temp);
 
@@ -193,14 +191,12 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
     return PLL_FAILURE;
   }
 
-  for (i = 0; i < count; ++i)
-  {
+  for (i = 0; i < count; ++i) {
     assert(branch_lengths[i] >= 0);
 
     /* compute effective pmatrix location */
-    for (n = 0; n < rate_cats; ++n)
-    {
-      pmat = pmatrix[matrix_indices[i]] + n*states*states_padded;
+    for (n = 0; n < rate_cats; ++n) {
+      pmat = pmatrix[matrix_indices[i]] + n * states * states_padded;
 
       pinvar = prop_invar[params_indices[n]];
       evecs = eigenvecs[params_indices[n]];
@@ -208,14 +204,11 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
       evals = eigenvals[params_indices[n]];
 
       /* if branch length is zero then set the p-matrix to identity matrix */
-      if (!branch_lengths[i])
-      {
+      if (!branch_lengths[i]) {
         for (j = 0; j < states; ++j)
           for (k = 0; k < states; ++k)
-            pmat[j*states_padded + k] = (j == k) ? 1 : 0;
-      }
-      else
-      {
+            pmat[j * states_padded + k] = (j == k) ? 1 : 0;
+      } else {
         /* NOTE: in order to deal with numerical issues in cases when Qt -> 0, we
          * use a trick suggested by Ben Redelings and explained here:
          * https://github.com/xflouris/libpll/issues/129#issuecomment-304004005
@@ -223,16 +216,13 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
          * for this by adding an identity matrix I in the very end */
 
         /* exponentiate eigenvalues */
-        if (pinvar > PLL_MISC_EPSILON)
-        {
+        if (pinvar > PLL_MISC_EPSILON) {
           for (j = 0; j < states; ++j)
             expd[j] = expm1(evals[j] * rates[n] * branch_lengths[i]
-                                       / (1.0 - pinvar));
-        }
-        else
-        {
+                            / (1.0 - pinvar));
+        } else {
           for (j = 0; j < states; ++j)
-           expd[j] = expm1(evals[j] * rates[n] * branch_lengths[i]);
+            expd[j] = expm1(evals[j] * rates[n] * branch_lengths[i]);
         }
 
 //        /* check if all values of expd are approximately one */
@@ -257,27 +247,24 @@ PLL_EXPORT int pll_core_update_pmatrix(double ** pmatrix,
 
         for (j = 0; j < states; ++j)
           for (k = 0; k < states; ++k)
-            temp[j*states+k] = inv_evecs[j*states_padded+k] * expd[k];
+            temp[j * states + k] = inv_evecs[j * states_padded + k] * expd[k];
 
-        for (j = 0; j < states; ++j)
-        {
-          for (k = 0; k < states; ++k)
-          {
+        for (j = 0; j < states; ++j) {
+          for (k = 0; k < states; ++k) {
 //            pmat[j*states_padded+k] = 0;
-            pmat[j*states_padded+k] = (j==k) ? 1.0 : 0;
-            for (m = 0; m < states; ++m)
-            {
-              pmat[j*states_padded+k] +=
-                  temp[j*states+m] * evecs[m*states_padded+k];
+            pmat[j * states_padded + k] = (j == k) ? 1.0 : 0;
+            for (m = 0; m < states; ++m) {
+              pmat[j * states_padded + k] +=
+                      temp[j * states + m] * evecs[m * states_padded + k];
             }
           }
         }
       }
-      #ifdef DEBUG
+#ifdef DEBUG
       for (j = 0; j < states; ++j)
         for (k = 0; k < states; ++k)
           assert(pmat[j*states_padded+k] >= 0);
-      #endif
+#endif
     }
   }
 
