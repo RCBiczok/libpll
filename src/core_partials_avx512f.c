@@ -639,7 +639,8 @@ PLL_EXPORT void pll_core_update_partial_ii_avx512f(unsigned int states,
         const double *rm7 = rm6 + states_padded;
 
         /* iterate over octuple of columns */
-        for (j = 0; j < states_padded; j += ELEM_PER_AVX515_REGISTER) {
+        for (j = 0; j < states_padded; j += ELEM_PER_AVX515_REGISTER) 
+        {
           v_lclv = _mm512_load_pd(left_clv + j);
           v_rclv = _mm512_load_pd(right_clv + j);
 
@@ -680,7 +681,13 @@ PLL_EXPORT void pll_core_update_partial_ii_avx512f(unsigned int states,
           lm3 += ELEM_PER_AVX515_REGISTER;
           rm3 += ELEM_PER_AVX515_REGISTER;
 
-          if (states != 20 || i < 16) {
+        }
+
+        if (i < 16) 
+        {
+          for (j = 0; j < states_padded; j += ELEM_PER_AVX515_REGISTER) 
+          {
+
             /* row 4 */
             v_mat = _mm512_load_pd(lm4);
             v_terma4 = _mm512_fmadd_pd(v_mat, v_lclv, v_terma4);
@@ -718,11 +725,16 @@ PLL_EXPORT void pll_core_update_partial_ii_avx512f(unsigned int states,
             v_mat = _mm512_load_pd(rm7);
             v_termb7 = _mm512_fmadd_pd(v_mat, v_rclv, v_termb7);
 
-          }
-
-          lm7 += ELEM_PER_AVX515_REGISTER;
-          rm7 += ELEM_PER_AVX515_REGISTER;
+            lm7 += ELEM_PER_AVX515_REGISTER;
+            rm7 += ELEM_PER_AVX515_REGISTER;
         }
+
+      }
+      else
+      {
+        lm7 += states_padded;
+        rm7 += states_padded;
+      }  
 
         /* point pmatrix to the next four rows */
         lmat = lm7;
