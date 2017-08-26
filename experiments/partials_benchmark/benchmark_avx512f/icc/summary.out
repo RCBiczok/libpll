@@ -1,0 +1,40 @@
+
+Collection and Platform Info
+----------------------------
+Parameter                 r000ah                                                                                                                                                                           
+------------------------  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Application Command Line  /home/hpc/pr63lo/di56sad2/rudolf/libpll/test/obj/00002_partials_benchmark "avx512f"                                                                                              
+Operating System          4.4.38-93-default NAME="SLES"
+VERSION="12-SP2"
+VERSION_ID="12.2"
+PRETTY_NAME="SUSE Linux Enterprise Server 12 SP2"
+ID="sles"
+ANSI_COLOR="0;32"
+CPE_NAME="cpe:/o:suse:sles:12:sp2"
+Computer Name             mcct03                                                                                                                                                                           
+Result Size               2893126                                                                                                                                                                          
+Collection start time     16:45:44 26/08/2017 UTC                                                                                                                                                          
+Collection stop time      16:45:48 26/08/2017 UTC                                                                                                                                                          
+
+CPU
+---
+Parameter          r000ah                                       
+-----------------  ---------------------------------------------
+Name               Intel(R) Processor code named Knights Landing
+Frequency          1299997985                                   
+Logical CPU Count  256                                          
+
+Summary
+-------
+Elapsed Time:       3.559
+CPU Time:           3.530
+Average CPU Usage:  0.991
+CPI Rate:           0.882
+
+Event summary
+-------------
+Hardware Event Type       Hardware Event Count:Self  Hardware Event Sample Count:Self  Events Per Sample
+------------------------  -------------------------  --------------------------------  -----------------
+CPU_CLK_UNHALTED.THREAD                  4589000000                               353  13000000         
+CPU_CLK_UNHALTED.REF_TSC                 4589000000                               353  13000000         
+INST_RETIRED.ANY                         5200000000                               400  13000000         
