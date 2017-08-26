@@ -19,6 +19,7 @@
     Schloss-Wolfsbrunnenweg 35, D-69118 Heidelberg, Germany
 */
 #include "common.h"
+#include <time.h>
 
 #define N_STATES_AA 20
 #define N_CAT_GAMMA 4
