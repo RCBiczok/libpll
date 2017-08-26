@@ -178,6 +178,8 @@ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = ${SHELL} /home/hpc/pr63lo/di56sad2/rudolf/libpll/missing aclocal-1.13
 ALLOCA = 
 AMTAR = $${TAR-tar}
+AM_AVX2_FLAGS = -march=core-avx2
+AM_AVX512F_FLAGS = -mavx512f
 AM_DEFAULT_VERBOSITY = 1
 AR = ar
 AUTOCONF = ${SHELL} /home/hpc/pr63lo/di56sad2/rudolf/libpll/missing autoconf
