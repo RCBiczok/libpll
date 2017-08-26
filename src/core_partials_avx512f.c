@@ -24,7 +24,7 @@
 #define ELEM_PER_AVX515_REGISTER 8
 
 
-#define PROCESS_8_ROWS_HALF(j)                         \
+#define PROCESS_8_COLS_HALF(j)                         \
   v_lclv = _mm512_load_pd(left_clv + j);               \
   v_rclv = _mm512_load_pd(right_clv + j);              \
                                                        \
@@ -60,7 +60,7 @@
   lm3 += ELEM_PER_AVX515_REGISTER;                     \
   rm3 += ELEM_PER_AVX515_REGISTER;                     \
 
-#define PROCESS_8_ROWS_FULL(j)                         \
+#define PROCESS_8_COLS_FULL(j)                         \
   v_lclv = _mm512_load_pd(left_clv + j);               \
   v_rclv = _mm512_load_pd(right_clv + j);              \
                                                        \
@@ -129,7 +129,7 @@
   rm7 += ELEM_PER_AVX515_REGISTER;                     \
 
 
-#define PROCESS_8_COLUMNS(i) {                                                         \
+#define PROCESS_8_ROWS(i) {                                                            \
   __m512d v_terma0 = _mm512_setzero_pd();                                              \
   __m512d v_termb0 = _mm512_setzero_pd();                                              \
   __m512d v_terma1 = _mm512_setzero_pd();                                              \
@@ -171,9 +171,9 @@
   const double *rm6 = rm5 + states_padded;                                             \
   const double *rm7 = rm6 + states_padded;                                             \
                                                                                        \
-  PROCESS_8_ROWS_FULL(0);                                                              \
-  PROCESS_8_ROWS_FULL(8);                                                              \
-  PROCESS_8_ROWS_FULL(16);                                                             \
+  PROCESS_8_COLS_FULL(0);                                                              \
+  PROCESS_8_COLS_FULL(8);                                                              \
+  PROCESS_8_COLS_FULL(16);                                                             \
                                                                                        \
   /* point pmatrix to the next four rows */                                            \
   lmat = lm7;                                                                          \
@@ -594,8 +594,8 @@ void pll_core_update_partial_ii_20x20_avx512f(unsigned int sites,
     for (k = 0; k < rate_cats; ++k) {
       __mmask8 rate_mask = 0xF;
 
-      PROCESS_8_COLUMNS(0);
-      PROCESS_8_COLUMNS(8);
+      PROCESS_8_ROWS(0);
+      PROCESS_8_ROWS(8);
 
       __m512d v_terma0 = _mm512_setzero_pd();
       __m512d v_termb0 = _mm512_setzero_pd();
@@ -622,9 +622,9 @@ void pll_core_update_partial_ii_20x20_avx512f(unsigned int sites,
       const double *rm2 = rm1 + states_padded;
       const double *rm3 = rm2 + states_padded;
 
-      PROCESS_8_ROWS_HALF(0)
-      PROCESS_8_ROWS_HALF(8)
-      PROCESS_8_ROWS_HALF(16)
+      PROCESS_8_COLS_HALF(0);
+      PROCESS_8_COLS_HALF(8);
+      PROCESS_8_COLS_HALF(16);
 
       /* point pmatrix to the next four rows */
       lmat += 8 * states_padded;
