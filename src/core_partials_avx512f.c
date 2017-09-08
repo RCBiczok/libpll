@@ -21,9 +21,6 @@
 
 #include "pll.h"
 
-#define ELEM_PER_AVX515_REGISTER 8
-
-
 #define PROCESS_8_COLS_HALF(j)                         \
   v_lclv = _mm512_load_pd(left_clv + j);               \
   v_rclv = _mm512_load_pd(right_clv + j);              \
