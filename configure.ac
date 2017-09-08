@@ -2,9 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([libpll], [0.3.1], [Tomas.Flouri@h-its.org])
+AC_INIT([libpll], [0.3.2], [Tomas.Flouri@h-its.org])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_LANG([C])
+AC_PROG_CC([gcc icc])
 AC_CONFIG_SRCDIR([src/pll.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -55,6 +56,39 @@ have_avx2=no
 have_avx=no
 have_sse3=no
 have_ps2pdf=no
+
+# Detection for ICC/GCC intrinsic flags
+my_save_cflags="$CFLAGS"
+CFLAGS=-mavx2
+AC_MSG_CHECKING([whether CC supports -mavx2])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AC_SUBST(AM_AVX2_FLAGS, [-mavx2])],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS=-march=core-avx2
+AC_MSG_CHECKING([whether CC supports -march=core-avx2])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AC_SUBST(AM_AVX2_FLAGS, [-march=core-avx2])],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS=-mavx512f
+AC_MSG_CHECKING([whether CC supports -mavx512f])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AC_SUBST(AM_AVX512F_FLAGS, [-mavx512f])],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS=-xCOMMON-AVX512
+AC_MSG_CHECKING([whether CC supports -xCOMMON-AVX512])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AC_SUBST(AM_AVX512F_FLAGS, [-xCOMMON-AVX512])],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS="$my_save_cflags"
+
 
 # Compile-time detection of processor features - now disabled
 #TODO: No detection fo AVX512F yet
@@ -142,6 +176,8 @@ AC_MSG_RESULT([
     Compiler:  ${CC}
     CFLAGS:    ${CFLAGS} ${CPPFLAGS}
     LIBS:      ${LIBS} ${LDFLAGS}
+    AVX2 Flags:      ${AM_AVX2_FLAGS}
+    AVX512F Flags:      ${AM_AVX512F_FLAGS}
 
   Continue with 'make' command
 ])
