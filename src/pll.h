@@ -102,6 +102,10 @@
 #define PLL_ONE_MIN (1-PLL_ONE_EPSILON)
 #define PLL_ONE_MAX (1+PLL_ONE_EPSILON)
 
+/* SMID capacities */
+
+#define ELEM_PER_AVX515_REGISTER 8
+
 /* attribute flags */
 
 #define PLL_ATTRIB_ARCH_CPU            0
@@ -1461,6 +1465,53 @@ int pll_core_likelihood_derivatives_avx2(unsigned int states,
                                          const double * diagptable,
                                          double * d_f,
                                          double * dd_f);
+#endif
+
+/* functions in core_derivatives_avx512f.c */
+
+#ifdef HAVE_AVX2
+
+PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
+                                                   unsigned int sites,
+                                                   unsigned int rate_cats,
+                                                   const double * clvp,
+                                                   const double * clvc,
+                                                   const unsigned int * parent_scaler,
+                                                   const unsigned int * child_scaler,
+                                                   double * const * eigenvecs,
+                                                   double * const * inv_eigenvecs,
+                                                   double * const * freqs,
+                                                   double * sumtable,
+                                                   unsigned int attrib);
+
+PLL_EXPORT int pll_core_update_sumtable_ti_avx512f(unsigned int states,
+                                                   unsigned int sites,
+                                                   unsigned int rate_cats,
+                                                   const double * parent_clv,
+                                                   const unsigned char * left_tipchars,
+                                                   const unsigned int * parent_scaler,
+                                                   double * const * eigenvecs,
+                                                   double * const * inv_eigenvecs,
+                                                   double * const * freqs,
+                                                   const unsigned int * tipmap,
+                                                   unsigned int tipmap_size,
+                                                   double * sumtable,
+                                                   unsigned int attrib);
+
+PLL_EXPORT
+int pll_core_likelihood_derivatives_avx512f(unsigned int states,
+                                            unsigned int states_padded,
+                                            unsigned int rate_cats,
+                                            unsigned int ef_sites,
+                                            const unsigned int * pattern_weights,
+                                            const double * rate_weights,
+                                            const int * invariant,
+                                            const double * prop_invar,
+                                            double * const * freqs,
+                                            const double * sumtable,
+                                            const double * diagptable,
+                                            double * d_f,
+                                            double * dd_f);
 #endif
 
 /* functions in core_likelihood_sse.c */

@@ -21,7 +21,6 @@
 
 #include "pll.h"
 
-#define ELEM_PER_AVX515_REGISTER 8
 #define STATES 20
 #define STATES_PADDED 24
 
