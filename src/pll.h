@@ -1469,7 +1469,7 @@ int pll_core_likelihood_derivatives_avx2(unsigned int states,
 
 /* functions in core_derivatives_avx512f.c */
 
-#ifdef HAVE_AVX2
+#ifdef HAVE_AVX512F
 
 PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
                                                    unsigned int sites,
