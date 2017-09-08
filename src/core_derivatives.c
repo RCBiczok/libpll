@@ -200,7 +200,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii(unsigned int states,
   }
 #endif
 #ifdef HAVE_AVX512F
-  if (attrib & PLL_ATTRIB_ARCH_AVX51F && PLL_STAT(avx512f_present))
+  if (attrib & PLL_ATTRIB_ARCH_AVX512F && PLL_STAT(avx512f_present))
   {
     return pll_core_update_sumtable_ii_avx512f(states,
                                                sites,
