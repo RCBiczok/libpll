@@ -5,9 +5,9 @@ src/parse_utree.c
 src/lex_rtree.c
 src/lex_utree.c
 src/parse_phylip.h
+examples/Makefile
 cmake-build-debug
 /Makefile
-/examples/Makefile
 /src/Makefile
 Makefile.in
 aclocal.m4
