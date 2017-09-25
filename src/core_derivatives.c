@@ -616,25 +616,24 @@ PLL_EXPORT int pll_core_likelihood_derivatives(unsigned int states,
     states_padded = (states+1) & 0xFFFFFFFE;
   }
 #endif
-
 #ifdef HAVE_AVX512F
   if (attrib & PLL_ATTRIB_ARCH_AVX512F && PLL_STAT(avx512f_present))
   {
-    states_padded = (states+3) & 0xFFFFFFFC;
+    states_padded = (states+7) & (0xFFFFFFFF - 7);
 
-    pll_core_likelihood_derivatives_avx2(states,
-                                        states_padded,
-                                        rate_cats,
-                                        ef_sites,
-                                        pattern_weights,
-                                        rate_weights,
-                                        invariant,
-                                        prop_invar,
-                                        freqs,
-                                        sumtable,
-                                        diagptable,
-                                        d_f,
-                                        dd_f);
+    pll_core_likelihood_derivatives_avx512f(states,
+                                            states_padded,
+                                            rate_cats,
+                                            ef_sites,
+                                            pattern_weights,
+                                            rate_weights,
+                                            invariant,
+                                            prop_invar,
+                                            freqs,
+                                            sumtable,
+                                            diagptable,
+                                            d_f,
+                                            dd_f);
   }
   else
 #endif
