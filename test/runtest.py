@@ -419,7 +419,8 @@ if __name__ == "__main__":
     files=sys.argv[2:]
 
 ##TODO only temporary
-  files = ["00002_partials_calc"]
+  #files = ["derivatives-aa"]
+  files = ["00002_partials_aa_calc"]
 
   files.sort()
 
