@@ -521,6 +521,246 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx2(unsigned int states,
   return PLL_SUCCESS;
 }
 
+#define COMPUTE_TI_QCOL(q, offset) \
+/* row 0 */ \
+v_mat    = _mm256_load_pd(rm0 + offset); \
+v_rterm0 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm0); \
+ \
+/* row 1 */ \
+v_mat    = _mm256_load_pd(rm1 + offset); \
+v_rterm1 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm1); \
+\
+/* row 2 */ \
+v_mat    = _mm256_load_pd(rm2 + offset); \
+v_rterm2 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm2); \
+\
+/* row 3 */ \
+v_mat    = _mm256_load_pd(rm3 + offset); \
+v_rterm3 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm3);
+
+PLL_EXPORT int pll_core_update_sumtable_ti_20x20_avx2(unsigned int sites,
+                                                      unsigned int rate_cats,
+                                                      const double * parent_clv,
+                                                      const unsigned char * left_tipchars,
+                                                      const unsigned int * parent_scaler,
+                                                      double * const * eigenvecs,
+                                                      double * const * inv_eigenvecs,
+                                                      double * const * freqs,
+                                                      const unsigned int * tipmap,
+                                                      unsigned int tipmap_size,
+                                                      double *sumtable,
+                                                      unsigned int attrib)
+{
+  unsigned int states = 20;
+  unsigned int states_padded = states;
+  unsigned int span = states_padded * rate_cats;
+  unsigned int maxstates = tipmap_size;
+
+  unsigned int i, j, k, n;
+  unsigned int tipstate;
+
+  unsigned int min_scaler = 0;
+  unsigned int * rate_scalings = NULL;
+  int per_rate_scaling = (attrib & PLL_ATTRIB_RATE_SCALERS) ? 1 : 0;
+
+  /* powers of scale threshold for undoing the scaling */
+  __m256d v_scale_minlh[PLL_SCALE_RATE_MAXDIFF];
+  if (per_rate_scaling)
+  {
+    rate_scalings = (unsigned int*) calloc(rate_cats, sizeof(unsigned int));
+
+    if (!rate_scalings)
+    {
+      pll_errno = PLL_ERROR_MEM_ALLOC;
+      snprintf (pll_errmsg, 200, "Cannot allocate memory for rate scalers");
+      return PLL_FAILURE;
+    }
+
+    double scale_factor = 1.0;
+    for (i = 0; i < PLL_SCALE_RATE_MAXDIFF; ++i)
+    {
+      scale_factor *= PLL_SCALE_THRESHOLD;
+      v_scale_minlh[i] = _mm256_set1_pd(scale_factor);
+    }
+  }
+
+  double * sum = sumtable;
+  const double * t_rclv = parent_clv;
+  const double * t_eigenvecs_padded;
+
+  double * eigenvecs_padded = (double *) pll_aligned_alloc (
+          (states_padded * states_padded * rate_cats) * sizeof(double),
+          PLL_ALIGNMENT_AVX);
+
+  double * precomp_left = (double *) pll_aligned_alloc (
+          (maxstates * states_padded * rate_cats) * sizeof(double),
+          PLL_ALIGNMENT_AVX);
+
+  if (!eigenvecs_padded || !precomp_left)
+  {
+    pll_errno = PLL_ERROR_MEM_ALLOC;
+    snprintf (pll_errmsg, 200, "Cannot allocate memory for tt_inv_eigenvecs");
+    return PLL_FAILURE;
+  }
+
+  /* add padding to eigenvecs matrix -> for efficient vectorization */
+  for (i = 0; i < rate_cats; ++i)
+  {
+    for (j = 0; j < states_padded; ++j)
+      for (k = 0; k < states_padded; ++k)
+      {
+        eigenvecs_padded[i*states_padded*states_padded + j*states_padded + k] =
+                (j < states && k < states) ? eigenvecs[i][j*states_padded + k] : 0.;
+      }
+  }
+
+  /* precompute left terms since they are the same for every site */
+  double * t_precomp = precomp_left;
+  for (n = 0; n < maxstates; ++n)
+  {
+    unsigned int state = tipmap ? tipmap[n] : n;
+
+    int ss = __builtin_popcount(state) == 1 ? __builtin_ctz(state) : -1;
+
+    for (i = 0; i < rate_cats; ++i)
+    {
+      for (j = 0; j < states_padded; j += 4)
+      {
+        __m256d v_lefterm;
+
+        if (ss != -1)
+        {
+          /* special case for non-ambiguous state */
+          __m256d v_freqs = _mm256_set1_pd(freqs[i][ss]);
+          __m256d v_eigen = _mm256_load_pd(inv_eigenvecs[i] +
+                                           ss*states_padded + j);
+          v_lefterm =  _mm256_mul_pd(v_eigen, v_freqs);
+        }
+        else
+        {
+          v_lefterm = _mm256_setzero_pd();
+          for (k = 0; k < states; ++k)
+          {
+            if ((state>>k) & 1)
+            {
+              __m256d v_freqs = _mm256_set1_pd(freqs[i][k]);
+              __m256d v_eigen = _mm256_load_pd(inv_eigenvecs[i] +
+                                               k*states_padded + j);
+
+              v_lefterm = _mm256_fmadd_pd(v_eigen, v_freqs, v_lefterm);
+            }
+          }
+        }
+
+        _mm256_store_pd(t_precomp, v_lefterm);
+        t_precomp += 4;
+      }
+    }
+  }
+
+  /* build sumtable */
+  for (n = 0; n < sites; n++)
+  {
+    /* compute per-rate scalers and obtain minimum value (within site) */
+    if (per_rate_scaling)
+    {
+      min_scaler = UINT_MAX;
+      for (i = 0; i < rate_cats; ++i)
+      {
+        rate_scalings[i] = (parent_scaler) ? parent_scaler[n*rate_cats+i] : 0;
+        if (rate_scalings[i] < min_scaler)
+          min_scaler = rate_scalings[i];
+      }
+
+      /* compute relative capped per-rate scalers */
+      for (i = 0; i < rate_cats; ++i)
+      {
+        rate_scalings[i] = PLL_MIN(rate_scalings[i] - min_scaler,
+                                   PLL_SCALE_RATE_MAXDIFF);
+      }
+    }
+
+    tipstate = (unsigned int) left_tipchars[n];
+
+    unsigned int loffset = tipstate * span;
+
+    t_eigenvecs_padded = eigenvecs_padded;
+    t_precomp = precomp_left + loffset;
+
+    for (i = 0; i < rate_cats; ++i)
+    {
+      __m256d v_rclv[5];
+      for (j = 0; j < 5; ++j)
+      {
+        v_rclv[j]    = _mm256_load_pd(t_rclv + j*4);
+      }
+
+      for (j = 0; j < states_padded; j += 4)
+      {
+        /* point to the four rows of the eigenvec matrix */
+        const double * rm0 = t_eigenvecs_padded;
+        const double * rm1 = rm0 + states_padded;
+        const double * rm2 = rm1 + states_padded;
+        const double * rm3 = rm2 + states_padded;
+        t_eigenvecs_padded += 4*states_padded;
+
+        __m256d v_rterm0 = _mm256_setzero_pd();
+        __m256d v_rterm1 = _mm256_setzero_pd();
+        __m256d v_rterm2 = _mm256_setzero_pd();
+        __m256d v_rterm3 = _mm256_setzero_pd();
+
+        __m256d v_mat;
+
+        COMPUTE_TI_QCOL(0, 0);
+        COMPUTE_TI_QCOL(1, 4);
+        COMPUTE_TI_QCOL(2, 8);
+        COMPUTE_TI_QCOL(3, 12);
+        COMPUTE_TI_QCOL(4, 16);
+
+        /* reduce righterm */
+        __m256d xmm0, xmm1, xmm2, xmm3;
+        xmm0 = _mm256_unpackhi_pd(v_rterm0,v_rterm1);
+        xmm1 = _mm256_unpacklo_pd(v_rterm0,v_rterm1);
+
+        xmm2 = _mm256_unpackhi_pd(v_rterm2,v_rterm3);
+        xmm3 = _mm256_unpacklo_pd(v_rterm2,v_rterm3);
+
+        xmm0 = _mm256_add_pd(xmm0,xmm1);
+        xmm1 = _mm256_add_pd(xmm2,xmm3);
+
+        xmm2 = _mm256_permute2f128_pd(xmm0,xmm1, _MM_SHUFFLE(0,2,0,1));
+
+        xmm3 = _mm256_blend_pd(xmm0,xmm1,12);
+
+        __m256d v_righterm = _mm256_add_pd(xmm2,xmm3);
+
+        __m256d v_lefterm = _mm256_load_pd(t_precomp + j);
+
+        __m256d v_sum = _mm256_mul_pd(v_lefterm, v_righterm);
+
+        /* apply per-rate scalers */
+        if (rate_scalings && rate_scalings[i] > 0)
+        {
+          v_sum = _mm256_mul_pd(v_sum, v_scale_minlh[rate_scalings[i]-1]);
+        }
+
+        _mm256_store_pd(sum + j, v_sum);
+      }
+
+      t_rclv += states_padded;
+      t_precomp += states_padded;
+      sum += states_padded;
+    }
+  }
+
+  pll_aligned_free(eigenvecs_padded);
+  pll_aligned_free(precomp_left);
+  if (rate_scalings)
+    free(rate_scalings);
+
+  return PLL_SUCCESS;
+}
+
 PLL_EXPORT int pll_core_update_sumtable_ti_avx2(unsigned int states,
                                                 unsigned int sites,
                                                 unsigned int rate_cats,
@@ -952,6 +1192,7 @@ int pll_core_likelihood_derivatives_avx2(unsigned int states,
 
         /* reduce lk0 (=LH), lk1 (=1st deriv) and v_lk2 (=2nd deriv) */
         v_lk0 = _mm256_hadd_pd(v_lk0, v_lk0);
+
         double lk0 = ((double *)&v_lk0)[0] + ((double *)&v_lk0)[2];
 
         v_lk1 = _mm256_hadd_pd(v_lk1, v_lk1);
