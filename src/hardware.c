@@ -127,7 +127,7 @@ static void cpu_features_detect()
   // Why do it the easy way, when you can do it the INTEL way ...
   pll_hardware.avx512f_present = _may_i_use_cpu_feature(_FEATURE_AVX512F);
 #else
-  //pll_hardware.avx512f_present = __builtin_cpu_supports("avx512f");
+  pll_hardware.avx512f_present = __builtin_cpu_supports("avx512f");
 #endif
 #endif
 }
