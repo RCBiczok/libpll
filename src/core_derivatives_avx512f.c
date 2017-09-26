@@ -32,6 +32,298 @@ inline double reduce_add_pd(const __m512d zmm) {
   return _mm_cvtsd_f64(t3);
 }
 
+#define COMPUTE_II_QCOL(q, offset) \
+/* row 0 */ \
+v_mat    = _mm512_load_pd(lm0 + offset); \
+v_lterm0 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm0); \
+v_mat    = _mm512_load_pd(rm0 + offset); \
+v_rterm0 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm0); \
+ \
+/* row 1 */ \
+v_mat    = _mm512_load_pd(lm1 + offset); \
+v_lterm1 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm1); \
+v_mat    = _mm512_load_pd(rm1 + offset); \
+v_rterm1 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm1); \
+\
+/* row 2 */ \
+v_mat    = _mm512_load_pd(lm2 + offset); \
+v_lterm2 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm2); \
+v_mat    = _mm512_load_pd(rm2 + offset); \
+v_rterm2 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm2); \
+\
+/* row 3 */ \
+v_mat    = _mm512_load_pd(lm3 + offset); \
+v_lterm3 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm3); \
+v_mat    = _mm512_load_pd(rm3 + offset); \
+v_rterm3 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm3); \
+\
+/* row 4 */ \
+v_mat    = _mm512_load_pd(lm4 + offset); \
+v_lterm4 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm4); \
+v_mat    = _mm512_load_pd(rm4 + offset); \
+v_rterm4 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm4); \
+\
+/* row 5 */ \
+v_mat    = _mm512_load_pd(lm5 + offset); \
+v_lterm5 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm5); \
+v_mat    = _mm512_load_pd(rm5 + offset); \
+v_rterm5 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm5); \
+\
+/* row 6 */ \
+v_mat    = _mm512_load_pd(lm6 + offset); \
+v_lterm6 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm6); \
+v_mat    = _mm512_load_pd(rm6 + offset); \
+v_rterm6 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm6); \
+\
+/* row 7 */ \
+v_mat    = _mm512_load_pd(lm7 + offset); \
+v_lterm7 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm7); \
+v_mat    = _mm512_load_pd(rm7 + offset); \
+v_rterm7 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm7);
+
+PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
+                                                         unsigned int rate_cats,
+                                                         const double *clvp,
+                                                         const double *clvc,
+                                                         const unsigned int *parent_scaler,
+                                                         const unsigned int *child_scaler,
+                                                         double *const *eigenvecs,
+                                                         double *const *inv_eigenvecs,
+                                                         double *const *freqs,
+                                                         double *sumtable,
+                                                         unsigned int attrib) {
+  unsigned int i, j, k, n;
+
+  /* build sumtable */
+  double *sum = sumtable;
+
+  const double *t_lclv = clvp;
+  const double *t_rclv = clvc;
+  double *t_freqs;
+
+  unsigned int states = 20;
+  unsigned int states_padded = (states + 7) & (0xFFFFFFFF - 7);
+
+  __m512i permute_mask = _mm512_setr_epi64(0 | 4,
+                                           0 | 5,
+                                           0 | 6,
+                                           0 | 7,
+                                           8 | 0,
+                                           8 | 1,
+                                           8 | 2,
+                                           8 | 3);
+  __m512i permute_mask_final_stage = _mm512_setr_epi64(0 | 2,
+                                                       0 | 3,
+                                                       8 | 0,
+                                                       8 | 1,
+                                                       0 | 6,
+                                                       0 | 7,
+                                                       8 | 4,
+                                                       8 | 5);
+
+  /* scaling stuff */
+  unsigned int min_scaler = 0;
+  unsigned int *rate_scalings = NULL;
+  int per_rate_scaling = (attrib & PLL_ATTRIB_RATE_SCALERS) ? 1 : 0;
+
+  /* powers of scale threshold for undoing the scaling */
+  __m512d v_scale_minlh[PLL_SCALE_RATE_MAXDIFF];
+  if (per_rate_scaling) {
+    rate_scalings = (unsigned int *) calloc(rate_cats, sizeof(unsigned int));
+
+    if (!rate_scalings) {
+      pll_errno = PLL_ERROR_MEM_ALLOC;
+      snprintf(pll_errmsg, 200, "Cannot allocate memory for rate scalers");
+      return PLL_FAILURE;
+    }
+
+    double scale_factor = 1.0;
+    for (i = 0; i < PLL_SCALE_RATE_MAXDIFF; ++i) {
+      scale_factor *= PLL_SCALE_THRESHOLD;
+      v_scale_minlh[i] = _mm512_set1_pd(scale_factor);
+    }
+  }
+
+  /* padded eigenvecs */
+  double *tt_eigenvecs = (double *) pll_aligned_alloc(
+          (states_padded * states_padded * rate_cats) * sizeof(double),
+          PLL_ALIGNMENT_AVX512F);
+
+  if (!tt_eigenvecs) {
+    pll_errno = PLL_ERROR_MEM_ALLOC;
+    snprintf(pll_errmsg, 200, "Cannot allocate memory for tt_eigenvecs");
+    return PLL_FAILURE;
+  }
+
+  /* transposed padded inv_eigenvecs */
+  double *tt_inv_eigenvecs = (double *) pll_aligned_alloc(
+          (states_padded * states_padded * rate_cats) * sizeof(double),
+          PLL_ALIGNMENT_AVX512F);
+
+  if (!tt_inv_eigenvecs) {
+    pll_errno = PLL_ERROR_MEM_ALLOC;
+    snprintf(pll_errmsg, 200, "Cannot allocate memory for tt_inv_eigenvecs");
+    return PLL_FAILURE;
+  }
+
+  memset(tt_eigenvecs, 0, (states_padded * states_padded * rate_cats) * sizeof(double));
+  memset(tt_inv_eigenvecs, 0, (states_padded * states_padded * rate_cats) * sizeof(double));
+
+  /* add padding to eigenvecs matrices and multiply with frequencies */
+  for (i = 0; i < rate_cats; ++i) {
+    t_freqs = freqs[i];
+    for (j = 0; j < states; ++j)
+      for (k = 0; k < states; ++k) {
+        tt_inv_eigenvecs[i * states_padded * states_padded + j * states_padded
+                         + k] = inv_eigenvecs[i][k * states_padded + j] * t_freqs[k];
+        tt_eigenvecs[i * states_padded * states_padded + j * states_padded
+                     + k] = eigenvecs[i][j * states_padded + k];
+      }
+  }
+
+  /* vectorized loop from update_sumtable() */
+  for (n = 0; n < sites; n++) {
+    /* compute per-rate scalers and obtain minimum value (within site) */
+    if (per_rate_scaling) {
+      min_scaler = UINT_MAX;
+      for (i = 0; i < rate_cats; ++i) {
+        rate_scalings[i] = (parent_scaler) ? parent_scaler[n * rate_cats + i] : 0;
+        rate_scalings[i] += (child_scaler) ? child_scaler[n * rate_cats + i] : 0;
+        if (rate_scalings[i] < min_scaler)
+          min_scaler = rate_scalings[i];
+      }
+
+      /* compute relative capped per-rate scalers */
+      for (i = 0; i < rate_cats; ++i) {
+        rate_scalings[i] = PLL_MIN(rate_scalings[i] - min_scaler,
+                                   PLL_SCALE_RATE_MAXDIFF);
+      }
+    }
+
+    const double *c_eigenvecs = tt_eigenvecs;
+    const double *ct_inv_eigenvecs = tt_inv_eigenvecs;
+    for (i = 0; i < rate_cats; ++i) {
+      __m512d v_lclv[3];
+      __m512d v_rclv[3];
+      for (j = 0; j < 3; ++j) {
+        v_lclv[j] = _mm512_load_pd(t_lclv + j * ELEM_PER_AVX515_REGISTER);
+        v_rclv[j] = _mm512_load_pd(t_rclv + j * ELEM_PER_AVX515_REGISTER);
+      }
+
+      for (j = 0; j < states_padded; j += ELEM_PER_AVX515_REGISTER) {
+        /* point to the four rows of the eigenvecs matrix */
+        const double *lm0 = ct_inv_eigenvecs;
+        const double *lm1 = lm0 + states_padded;
+        const double *lm2 = lm1 + states_padded;
+        const double *lm3 = lm2 + states_padded;
+        const double *lm4 = lm3 + states_padded;
+        const double *lm5 = lm4 + states_padded;
+        const double *lm6 = lm5 + states_padded;
+        const double *lm7 = lm6 + states_padded;
+        ct_inv_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;
+
+        /* point to the four rows of the inv_eigenvecs matrix */
+        const double *rm0 = c_eigenvecs;
+        const double *rm1 = rm0 + states_padded;
+        const double *rm2 = rm1 + states_padded;
+        const double *rm3 = rm2 + states_padded;
+        const double *rm4 = rm3 + states_padded;
+        const double *rm5 = rm4 + states_padded;
+        const double *rm6 = rm5 + states_padded;
+        const double *rm7 = rm6 + states_padded;
+        c_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;
+
+        __m512d v_lterm0 = _mm512_setzero_pd();
+        __m512d v_rterm0 = _mm512_setzero_pd();
+        __m512d v_lterm1 = _mm512_setzero_pd();
+        __m512d v_rterm1 = _mm512_setzero_pd();
+        __m512d v_lterm2 = _mm512_setzero_pd();
+        __m512d v_rterm2 = _mm512_setzero_pd();
+        __m512d v_lterm3 = _mm512_setzero_pd();
+        __m512d v_rterm3 = _mm512_setzero_pd();
+        __m512d v_lterm4 = _mm512_setzero_pd();
+        __m512d v_rterm4 = _mm512_setzero_pd();
+        __m512d v_lterm5 = _mm512_setzero_pd();
+        __m512d v_rterm5 = _mm512_setzero_pd();
+        __m512d v_lterm6 = _mm512_setzero_pd();
+        __m512d v_rterm6 = _mm512_setzero_pd();
+        __m512d v_lterm7 = _mm512_setzero_pd();
+        __m512d v_rterm7 = _mm512_setzero_pd();
+
+        __m512d v_mat;
+
+        /* iterate over quadruples of columns */
+        COMPUTE_II_QCOL(0, 0);
+        COMPUTE_II_QCOL(1, 8);
+        COMPUTE_II_QCOL(2, 16);
+
+        /* compute lefterm */
+        __m512d xmm0 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm0, v_lterm1),
+                                     _mm512_unpacklo_pd(v_lterm0, v_lterm1));
+        __m512d xmm1 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm2, v_lterm3),
+                                     _mm512_unpacklo_pd(v_lterm2, v_lterm3));
+        __m512d xmm2 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm4, v_lterm5),
+                                     _mm512_unpacklo_pd(v_lterm4, v_lterm5));
+        __m512d xmm3 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm6, v_lterm7),
+                                     _mm512_unpacklo_pd(v_lterm6, v_lterm7));
+
+        __m512d ymm0 = _mm512_add_pd(_mm512_permutex2var_pd(xmm0, permute_mask, xmm2),
+                                     _mm512_mask_blend_pd(0xF0, xmm0, xmm2));
+
+        __m512d ymm1 = _mm512_add_pd(_mm512_permutex2var_pd(xmm1, permute_mask, xmm3),
+                                     _mm512_mask_blend_pd(0xF0, xmm1, xmm3));
+
+        __m512d v_lefterm_sum = _mm512_add_pd(_mm512_permutex2var_pd(ymm0,
+                                                                     permute_mask_final_stage,
+                                                                     ymm1),
+                                              _mm512_mask_blend_pd(0xCC, ymm0, ymm1));
+
+        /* compute righterm */
+        xmm0 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm0, v_rterm1),
+                             _mm512_unpacklo_pd(v_rterm0, v_rterm1));
+        xmm1 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm2, v_rterm3),
+                             _mm512_unpacklo_pd(v_rterm2, v_rterm3));
+        xmm2 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm4, v_rterm5),
+                             _mm512_unpacklo_pd(v_rterm4, v_rterm5));
+        xmm3 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm6, v_rterm7),
+                             _mm512_unpacklo_pd(v_rterm6, v_rterm7));
+
+        ymm0 = _mm512_add_pd(_mm512_permutex2var_pd(xmm0, permute_mask, xmm2),
+                             _mm512_mask_blend_pd(0xF0, xmm0, xmm2));
+
+        ymm1 = _mm512_add_pd(_mm512_permutex2var_pd(xmm1, permute_mask, xmm3),
+                             _mm512_mask_blend_pd(0xF0, xmm1, xmm3));
+
+        __m512d v_righterm_sum = _mm512_add_pd(_mm512_permutex2var_pd(ymm0,
+                                                                      permute_mask_final_stage,
+                                                                      ymm1),
+                                               _mm512_mask_blend_pd(0xCC, ymm0, ymm1));
+
+        /* update sum */
+        __m512d v_prod = _mm512_mul_pd(v_lefterm_sum, v_righterm_sum);
+
+        /* apply per-rate scalers */
+        if (rate_scalings && rate_scalings[i] > 0) {
+          v_prod = _mm512_mul_pd(v_prod, v_scale_minlh[rate_scalings[i] - 1]);
+        }
+
+        _mm512_store_pd(sum + j, v_prod);
+      }
+
+      t_lclv += states_padded;
+      t_rclv += states_padded;
+      sum += states_padded;
+    }
+  }
+
+  pll_aligned_free(tt_inv_eigenvecs);
+  pll_aligned_free(tt_eigenvecs);
+  if (rate_scalings)
+    free(rate_scalings);
+
+  return PLL_SUCCESS;
+}
+
 PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
                                                    unsigned int sites,
                                                    unsigned int rate_cats,
@@ -53,7 +345,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
   const double *t_clvc = clvc;
   double *t_freqs;
 
-  /* dedicated functions for 4x4 matrices */
+  /* dedicated functions for 4x4 and 20x20 matrices */
   if (states == 4) {
     /* call AVX variant */
     return pll_core_update_sumtable_ii_avx(states,
@@ -68,6 +360,18 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
                                            freqs,
                                            sumtable,
                                            attrib);
+  } else if (states == 20) {
+    return pll_core_update_sumtable_ii_20x20_avx512f(sites,
+                                                     rate_cats,
+                                                     clvp,
+                                                     clvc,
+                                                     parent_scaler,
+                                                     child_scaler,
+                                                     eigenvecs,
+                                                     inv_eigenvecs,
+                                                     freqs,
+                                                     sumtable,
+                                                     attrib);
   }
 
   unsigned int states_padded = (states + 7) & (0xFFFFFFFF - 7);
@@ -222,7 +526,6 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
           /* row 0 */
           v_eigen = _mm512_load_pd(im0 + k);
           v_lefterm0 = _mm512_fmadd_pd(v_eigen, v_clvp, v_lefterm0);
-
 
           v_eigen = _mm512_load_pd(em0 + k);
           v_righterm0 = _mm512_fmadd_pd(v_eigen, v_clvc, v_righterm0);
