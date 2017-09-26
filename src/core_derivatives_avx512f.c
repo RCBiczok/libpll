@@ -21,6 +21,17 @@
 #include <limits.h>
 #include "pll.h"
 
+inline double reduce_add_pd(const __m512d zmm) {
+  __m256d low = _mm512_castpd512_pd256(zmm);
+  __m256d high = _mm512_extractf64x4_pd(zmm, 1);
+
+  __m256d a = _mm256_add_pd(low, high);
+  __m256d t1 = _mm256_hadd_pd(a, a);
+  __m128d t2 = _mm256_extractf128_pd(t1, 1);
+  __m128d t3 = _mm_add_sd(_mm256_castpd256_pd128(t1), t2);
+  return _mm_cvtsd_f64(t3);
+}
+
 PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
                                                    unsigned int sites,
                                                    unsigned int rate_cats,
@@ -59,6 +70,8 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
                                            attrib);
   }
 
+  unsigned int states_padded = (states + 7) & (0xFFFFFFFF - 7);
+
   __m512i permute_mask = _mm512_setr_epi64(0 | 4,
                                            0 | 5,
                                            0 | 6,
@@ -75,8 +88,6 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
                                                        0 | 7,
                                                        8 | 4,
                                                        8 | 5);
-
-  unsigned int states_padded = (states + 7) & (0xFFFFFFFF - 7);
 
   /* scaling stuff */
   unsigned int min_scaler = 0;
@@ -365,6 +376,239 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
                                             const double *diagptable,
                                             double *d_f,
                                             double *dd_f) {
-  //TODOs
+  unsigned int i, j, k, n;
+  unsigned int span_padded = rate_cats * states_padded;
+
+  double *t_diagp = NULL;
+  const double *diagp_start = NULL;
+  double *invar_lk = NULL;
+
+  /* check for special cases in which we can save some computation later on */
+  int use_pinv = 0;
+  int eq_weights = 1;
+  for (i = 0; i < rate_cats; ++i) {
+    /* check if proportion of invariant site is used */
+    use_pinv |= (prop_invar[i] > 0);
+
+    /* check if rate weights are all equal (e.g. GAMMA) */
+    eq_weights &= (rate_weights[i] == rate_weights[0]);
+  }
+
+  if (use_pinv) {
+    invar_lk = (double *) pll_aligned_alloc(rate_cats * states * sizeof(double),
+                                            PLL_ALIGNMENT_AVX512F);
+
+    if (!invar_lk) {
+      pll_errno = PLL_ERROR_MEM_ALLOC;
+      snprintf(pll_errmsg, 200, "Unable to allocate enough memory.");
+      return PLL_FAILURE;
+    }
+
+    /* pre-compute invariant site likelihoods*/
+    for (i = 0; i < states; ++i) {
+      for (j = 0; j < rate_cats; ++j) {
+        invar_lk[i * rate_cats + j] = freqs[j][i] * prop_invar[j];
+      }
+    }
+  }
+
+  if (states == 4) {
+    //TODO: cannot use this, not guaranteed to be aligned for AVX512
+    //diagp_start = diagptable;
+    double *diagptable_copy = (double *) pll_aligned_alloc(
+            rate_cats * states * 4 * sizeof(double),
+            PLL_ALIGNMENT_AVX512F);
+    memcpy(diagptable_copy, diagptable, rate_cats * states * 4 * sizeof(double));
+    diagp_start = diagptable_copy;
+  } else {
+    t_diagp = (double *) pll_aligned_alloc(
+            3 * span_padded * sizeof(double),
+            PLL_ALIGNMENT_AVX512F);
+
+    if (!t_diagp) {
+      pll_errno = PLL_ERROR_MEM_ALLOC;
+      snprintf(pll_errmsg, 200, "Unable to allocate enough memory.");
+      return PLL_FAILURE;
+    }
+
+    memset(t_diagp, 0, 3 * span_padded * sizeof(double));
+
+    /* transpose diagptable */
+    for (i = 0; i < rate_cats; ++i) {
+      for (j = 0; j < states; ++j) {
+        for (k = 0; k < 3; ++k) {
+          t_diagp[i * states_padded * 3 + k * states_padded + j] =
+                  diagptable[i * states * 4 + j * 4 + k];
+        }
+      }
+    }
+
+    diagp_start = t_diagp;
+  }
+
+  /* here we will temporary store per-site LH, 1st and 2nd derivatives */
+  double site_lk[16] __attribute__(( aligned ( PLL_ALIGNMENT_AVX512F )));
+
+  /* vectors for accumulating 1st and 2nd derivatives */
+  __m256d v_df = _mm256_setzero_pd();
+  __m256d v_ddf = _mm256_setzero_pd();
+  __m256d v_all1 = _mm256_set1_pd(1.);
+
+  const double *sum = sumtable;
+  const int *invariant_ptr = invariant;
+  unsigned int offset = 0;
+  for (n = 0; n < ef_sites; ++n) {
+    const double *diagp = diagp_start;
+
+    __m256d v_sitelk = _mm256_setzero_pd();
+    for (i = 0; i < rate_cats; ++i) {
+      __m256d v_cat_sitelk = _mm256_setzero_pd();
+
+      if (states == 4) {
+        /* use unrolled loop */
+        __m256d v_diagp = _mm256_load_pd(diagp);
+        __m256d v_sum = _mm256_set1_pd(sum[0]);
+        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+
+        v_diagp = _mm256_load_pd(diagp + 4);
+        v_sum = _mm256_set1_pd(sum[1]);
+        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+
+        v_diagp = _mm256_load_pd(diagp + 8);
+        v_sum = _mm256_set1_pd(sum[2]);
+        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+
+        v_diagp = _mm256_load_pd(diagp + 12);
+        v_sum = _mm256_set1_pd(sum[3]);
+        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+
+        diagp += 16;
+        sum += 4;
+      } else {
+        /* pointer to 3 "rows" of diagp with values for lk0, lk1 and lk2 */
+        const double *r0 = diagp;
+        const double *r1 = r0 + states_padded;
+        const double *r2 = r1 + states_padded;
+
+        /* unroll 1st iteration to save a couple of adds */
+        __m512d v_sum = _mm512_load_pd(sum);
+        __m512d v_diagp = _mm512_load_pd(r0);
+        __m512d v_lk0 = _mm512_mul_pd(v_sum, v_diagp);
+
+        v_diagp = _mm512_load_pd(r1);
+        __m512d v_lk1 = _mm512_mul_pd(v_sum, v_diagp);
+
+        v_diagp = _mm512_load_pd(r2);
+        __m512d v_lk2 = _mm512_mul_pd(v_sum, v_diagp);
+
+        /* iterate over remaining states (if any) */
+        for (j = ELEM_PER_AVX515_REGISTER; j < states_padded; j += ELEM_PER_AVX515_REGISTER) {
+          v_sum = _mm512_load_pd(sum + j);
+          v_diagp = _mm512_load_pd(r0 + j);
+          v_lk0 = _mm512_fmadd_pd(v_sum, v_diagp, v_lk0);
+
+          v_diagp = _mm512_load_pd(r1 + j);
+          v_lk1 = _mm512_fmadd_pd(v_sum, v_diagp, v_lk1);
+
+          v_diagp = _mm512_load_pd(r2 + j);
+          v_lk2 = _mm512_fmadd_pd(v_sum, v_diagp, v_lk2);
+        }
+
+        /* reduce lk0 (=LH), lk1 (=1st deriv) and v_lk2 (=2nd deriv) */
+        double lk0 = reduce_add_pd(v_lk0);
+        double lk1 = reduce_add_pd(v_lk1);
+        double lk2 = reduce_add_pd(v_lk2);
+
+        v_cat_sitelk = _mm256_setr_pd(lk0, lk1, lk2, 0.);
+
+        sum += states_padded;
+        diagp += 3 * states_padded;
+      }
+
+      /* account for invariant sites */
+      if (use_pinv && prop_invar[i] > 0) {
+        __m256d v_inv_prop = _mm256_set1_pd(1. - prop_invar[i]);
+        v_cat_sitelk = _mm256_mul_pd(v_cat_sitelk, v_inv_prop);
+
+        if (invariant && *invariant_ptr != -1) {
+          double site_invar_lk = invar_lk[(*invariant_ptr) * rate_cats + i];
+          __m256d v_inv_lk = _mm256_setr_pd(site_invar_lk, 0., 0., 0.);
+          v_cat_sitelk = _mm256_add_pd(v_cat_sitelk, v_inv_lk);
+        }
+      }
+
+      /* apply rate category weights */
+      if (eq_weights) {
+        /* all rate weights are equal -> no multiplication needed */
+        v_sitelk = _mm256_add_pd(v_sitelk, v_cat_sitelk);
+      } else {
+        __m256d v_weight = _mm256_set1_pd(rate_weights[i]);
+        v_sitelk = _mm256_fmadd_pd(v_cat_sitelk, v_weight, v_sitelk);
+      }
+    }
+
+    _mm256_store_pd(&site_lk[offset], v_sitelk);
+    offset += 4;
+
+    invariant_ptr++;
+
+    /* build derivatives for 4 adjacent sites at once */
+    if (offset == 16) {
+      __m256d v_term0 = _mm256_setr_pd(site_lk[0], site_lk[4],
+                                       site_lk[8], site_lk[12]);
+      __m256d v_term1 = _mm256_setr_pd(site_lk[1], site_lk[5],
+                                       site_lk[9], site_lk[13]);
+      __m256d v_term2 = _mm256_setr_pd(site_lk[2], site_lk[6],
+                                       site_lk[10], site_lk[14]);
+
+      __m256d v_recip0 = _mm256_div_pd(v_all1, v_term0);
+      __m256d v_deriv1 = _mm256_mul_pd(v_term1, v_recip0);
+      __m256d v_deriv2 = _mm256_sub_pd(_mm256_mul_pd(v_deriv1, v_deriv1),
+                                       _mm256_mul_pd(v_term2, v_recip0));
+
+      /* assumption: no zero weights */
+      if ((pattern_weights[n - 3] | pattern_weights[n - 2] |
+           pattern_weights[n - 1] | pattern_weights[n]) == 1) {
+        /* all 4 weights are 1 -> no multiplication needed */
+        v_df = _mm256_sub_pd(v_df, v_deriv1);
+        v_ddf = _mm256_add_pd(v_ddf, v_deriv2);
+      } else {
+        __m256d v_patw = _mm256_setr_pd(pattern_weights[n - 3], pattern_weights[n - 2],
+                                        pattern_weights[n - 1], pattern_weights[n]);
+
+        v_df = _mm256_fnmadd_pd(v_deriv1, v_patw, v_df);
+        v_ddf = _mm256_fmadd_pd(v_deriv2, v_patw, v_ddf);
+      }
+      offset = 0;
+    }
+  }
+
+  *d_f = *dd_f = 0.;
+
+  /* remainder loop */
+  while (offset > 0) {
+    offset -= 4;
+    n--;
+    double deriv1 = (-site_lk[offset + 1] / site_lk[offset]);
+    double deriv2 = (deriv1 * deriv1 - (site_lk[offset + 2] / site_lk[offset]));
+    *d_f += pattern_weights[n] * deriv1;
+    *dd_f += pattern_weights[n] * deriv2;
+  }
+
+  assert(offset == 0 && n == ef_sites / 4 * 4);
+
+  /* reduce 1st derivative */
+  _mm256_store_pd(site_lk, v_df);
+  *d_f += site_lk[0] + site_lk[1] + site_lk[2] + site_lk[3];
+
+  /* reduce 2nd derivative */
+  _mm256_store_pd(site_lk, v_ddf);
+  *dd_f += site_lk[0] + site_lk[1] + site_lk[2] + site_lk[3];
+
+  if (t_diagp)
+    pll_aligned_free(t_diagp);
+  if (invar_lk)
+    pll_aligned_free(invar_lk);
+
   return PLL_SUCCESS;
 }
