@@ -32,6 +32,31 @@ inline double reduce_add_pd(const __m512d zmm) {
   return _mm_cvtsd_f64(t3);
 }
 
+#define COMPUTE_II_QCOL_HALF(q, offset) \
+/* row 0 */ \
+v_mat    = _mm512_load_pd(lm0 + offset); \
+v_lterm0 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm0); \
+v_mat    = _mm512_load_pd(rm0 + offset); \
+v_rterm0 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm0); \
+\
+/* row 1 */ \
+v_mat    = _mm512_load_pd(lm1 + offset); \
+v_lterm1 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm1); \
+v_mat    = _mm512_load_pd(rm1 + offset); \
+v_rterm1 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm1); \
+\
+/* row 2 */ \
+v_mat    = _mm512_load_pd(lm2 + offset); \
+v_lterm2 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm2); \
+v_mat    = _mm512_load_pd(rm2 + offset); \
+v_rterm2 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm2); \
+\
+/* row 3 */ \
+v_mat    = _mm512_load_pd(lm3 + offset); \
+v_lterm3 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm3); \
+v_mat    = _mm512_load_pd(rm3 + offset); \
+v_rterm3 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm3);
+
 #define COMPUTE_II_QCOL(q, offset) \
 /* row 0 */ \
 v_mat    = _mm512_load_pd(lm0 + offset); \
@@ -81,6 +106,186 @@ v_lterm7 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm7); \
 v_mat    = _mm512_load_pd(rm7 + offset); \
 v_rterm7 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm7);
 
+#define COMPUTE_II_QROW_8(j) {                                                            \
+/* point to the four rows of the eigenvecs matrix */                                      \
+  const double *lm0 = ct_inv_eigenvecs;                                                   \
+  const double *lm1 = lm0 + states_padded;                                                \
+  const double *lm2 = lm1 + states_padded;                                                \
+  const double *lm3 = lm2 + states_padded;                                                \
+  const double *lm4 = lm3 + states_padded;                                                \
+  const double *lm5 = lm4 + states_padded;                                                \
+  const double *lm6 = lm5 + states_padded;                                                \
+  const double *lm7 = lm6 + states_padded;                                                \
+  ct_inv_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;                           \
+                                                                                          \
+  /* point to the four rows of the inv_eigenvecs matrix */                                \
+  const double *rm0 = c_eigenvecs;                                                        \
+  const double *rm1 = rm0 + states_padded;                                                \
+  const double *rm2 = rm1 + states_padded;                                                \
+  const double *rm3 = rm2 + states_padded;                                                \
+  const double *rm4 = rm3 + states_padded;                                                \
+  const double *rm5 = rm4 + states_padded;                                                \
+  const double *rm6 = rm5 + states_padded;                                                \
+  const double *rm7 = rm6 + states_padded;                                                \
+  c_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;                                \
+                                                                                          \
+  __m512d v_lterm0 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm0 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm1 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm1 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm2 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm2 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm3 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm3 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm4 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm4 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm5 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm5 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm6 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm6 = _mm512_setzero_pd();                                                 \
+  __m512d v_lterm7 = _mm512_setzero_pd();                                                 \
+  __m512d v_rterm7 = _mm512_setzero_pd();                                                 \
+                                                                                          \
+  __m512d v_mat;                                                                          \
+                                                                                          \
+  /* iterate over quadruples of columns */                                                \
+  COMPUTE_II_QCOL(0, 0);                                                                  \
+  COMPUTE_II_QCOL(1, 8);                                                                  \
+  COMPUTE_II_QCOL(2, 16);                                                                 \
+                                                                                          \
+  /* compute lefterm */                                                                   \
+  __m512d xmm0 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm0, v_lterm1),                    \
+                               _mm512_unpacklo_pd(v_lterm0, v_lterm1));                   \
+  __m512d xmm1 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm2, v_lterm3),                    \
+                               _mm512_unpacklo_pd(v_lterm2, v_lterm3));                   \
+  __m512d xmm2 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm4, v_lterm5),                    \
+                               _mm512_unpacklo_pd(v_lterm4, v_lterm5));                   \
+  __m512d xmm3 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm6, v_lterm7),                    \
+                               _mm512_unpacklo_pd(v_lterm6, v_lterm7));                   \
+                                                                                          \
+  __m512d ymm0 = _mm512_add_pd(_mm512_permutex2var_pd(xmm0, permute_mask, xmm2),          \
+                               _mm512_mask_blend_pd(0xF0, xmm0, xmm2));                   \
+                                                                                          \
+  __m512d ymm1 = _mm512_add_pd(_mm512_permutex2var_pd(xmm1, permute_mask, xmm3),          \
+                               _mm512_mask_blend_pd(0xF0, xmm1, xmm3));                   \
+                                                                                          \
+  __m512d v_lefterm_sum = _mm512_add_pd(_mm512_permutex2var_pd(ymm0,                      \
+                                                               permute_mask_final_stage,  \
+                                                               ymm1),                     \
+                                        _mm512_mask_blend_pd(0xCC, ymm0, ymm1));          \
+                                                                                          \
+  /* compute righterm */                                                                  \
+  xmm0 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm0, v_rterm1),                            \
+                       _mm512_unpacklo_pd(v_rterm0, v_rterm1));                           \
+  xmm1 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm2, v_rterm3),                            \
+                       _mm512_unpacklo_pd(v_rterm2, v_rterm3));                           \
+  xmm2 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm4, v_rterm5),                            \
+                       _mm512_unpacklo_pd(v_rterm4, v_rterm5));                           \
+  xmm3 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm6, v_rterm7),                            \
+                       _mm512_unpacklo_pd(v_rterm6, v_rterm7));                           \
+                                                                                          \
+  ymm0 = _mm512_add_pd(_mm512_permutex2var_pd(xmm0, permute_mask, xmm2),                  \
+                       _mm512_mask_blend_pd(0xF0, xmm0, xmm2));                           \
+                                                                                          \
+  ymm1 = _mm512_add_pd(_mm512_permutex2var_pd(xmm1, permute_mask, xmm3),                  \
+                       _mm512_mask_blend_pd(0xF0, xmm1, xmm3));                           \
+                                                                                          \
+  __m512d v_righterm_sum = _mm512_add_pd(_mm512_permutex2var_pd(ymm0,                     \
+                                                                permute_mask_final_stage, \
+                                                                ymm1),                    \
+                                         _mm512_mask_blend_pd(0xCC, ymm0, ymm1));         \
+                                                                                          \
+  /* update sum */                                                                        \
+  __m512d v_prod = _mm512_mul_pd(v_lefterm_sum, v_righterm_sum);                          \
+                                                                                          \
+  /* apply per-rate scalers */                                                            \
+  if (rate_scalings && rate_scalings[i] > 0) {                                            \
+    v_prod = _mm512_mul_pd(v_prod, v_scale_minlh[rate_scalings[i] - 1]);                  \
+  }                                                                                       \
+                                                                                          \
+  _mm512_store_pd(sum + j, v_prod);}                                                      \
+
+
+
+#define COMPUTE_II_QROW_4(j) {                                                             \
+/* point to the four rows of the eigenvecs matrix */                                       \
+  const double *lm0 = ct_inv_eigenvecs;                                                    \
+  const double *lm1 = lm0 + states_padded;                                                 \
+  const double *lm2 = lm1 + states_padded;                                                 \
+  const double *lm3 = lm2 + states_padded;                                                 \
+  ct_inv_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;                            \
+                                                                                           \
+  /* point to the four rows of the inv_eigenvecs matrix */                                 \
+  const double *rm0 = c_eigenvecs;                                                         \
+  const double *rm1 = rm0 + states_padded;                                                 \
+  const double *rm2 = rm1 + states_padded;                                                 \
+  const double *rm3 = rm2 + states_padded;                                                 \
+  c_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;                                 \
+                                                                                           \
+  __m512d v_lterm0 = _mm512_setzero_pd();                                                  \
+  __m512d v_rterm0 = _mm512_setzero_pd();                                                  \
+  __m512d v_lterm1 = _mm512_setzero_pd();                                                  \
+  __m512d v_rterm1 = _mm512_setzero_pd();                                                  \
+  __m512d v_lterm2 = _mm512_setzero_pd();                                                  \
+  __m512d v_rterm2 = _mm512_setzero_pd();                                                  \
+  __m512d v_lterm3 = _mm512_setzero_pd();                                                  \
+  __m512d v_rterm3 = _mm512_setzero_pd();                                                  \
+                                                                                           \
+  __m512d v_mat;                                                                           \
+                                                                                           \
+  /* iterate over quadruples of columns */                                                 \
+  COMPUTE_II_QCOL_HALF(0, 0);                                                              \
+  COMPUTE_II_QCOL_HALF(1, 8);                                                              \
+  COMPUTE_II_QCOL_HALF(2, 16);                                                             \
+                                                                                           \
+  /* compute lefterm */                                                                    \
+  __m512d xmm0 = _mm512_unpackhi_pd(v_rterm0, v_rterm1);                                   \
+  __m512d xmm1 = _mm512_unpacklo_pd(v_rterm0, v_rterm1);                                   \
+                                                                                           \
+  __m512d xmm2 = _mm512_unpackhi_pd(v_rterm2, v_rterm3);                                   \
+  __m512d xmm3 = _mm512_unpacklo_pd(v_rterm2, v_rterm3);                                   \
+                                                                                           \
+  xmm0 = _mm512_add_pd(xmm0, xmm1);                                                        \
+  xmm1 = _mm512_add_pd(xmm2, xmm3);                                                        \
+                                                                                           \
+  xmm2 = _mm512_permutex2var_pd(xmm0, permute_mask_final_stage, xmm1);                     \
+                                                                                           \
+  xmm3 = _mm512_mask_blend_pd(0xCC, xmm0, xmm1);                                           \
+                                                                                           \
+  __m512d blend = _mm512_add_pd(xmm2, xmm3);                                               \
+                                                                                           \
+  __m512d v_righterm_sum = _mm512_add_pd(blend,                                            \
+                                      _mm512_permutexvar_pd(switch_256lanes_mask, blend)); \
+                                                                                           \
+  /* compute termb */                                                                      \
+                                                                                           \
+  xmm0 = _mm512_unpackhi_pd(v_lterm0, v_lterm1);                                           \
+  xmm1 = _mm512_unpacklo_pd(v_lterm0, v_lterm1);                                           \
+                                                                                           \
+  xmm2 = _mm512_unpackhi_pd(v_lterm2, v_lterm3);                                           \
+  xmm3 = _mm512_unpacklo_pd(v_lterm2, v_lterm3);                                           \
+                                                                                           \
+  xmm0 = _mm512_add_pd(xmm0, xmm1);                                                        \
+  xmm1 = _mm512_add_pd(xmm2, xmm3);                                                        \
+                                                                                           \
+  xmm2 = _mm512_permutex2var_pd(xmm0, permute_mask_final_stage, xmm1);                     \
+                                                                                           \
+  xmm3 = _mm512_mask_blend_pd(0xCC, xmm0, xmm1);                                           \
+                                                                                           \
+  blend = _mm512_add_pd(xmm2, xmm3);                                                       \
+                                                                                           \
+  __m512d v_lefterm_sum = _mm512_add_pd(blend,                                             \
+                                      _mm512_permutexvar_pd(switch_256lanes_mask, blend)); \
+                                                                                           \
+  __m512d v_prod = _mm512_mul_pd(v_righterm_sum, v_lefterm_sum);                           \
+                                                                                           \
+  /* apply per-rate scalers */                                                             \
+  if (rate_scalings && rate_scalings[i] > 0) {                                             \
+    v_prod = _mm512_mul_pd(v_prod, v_scale_minlh[rate_scalings[i] - 1]);                   \
+  }                                                                                        \
+                                                                                           \
+  _mm512_store_pd(sum + j, v_prod);}                                                       \
+
 PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
                                                          unsigned int rate_cats,
                                                          const double *clvp,
@@ -104,6 +309,14 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
   unsigned int states = 20;
   unsigned int states_padded = (states + 7) & (0xFFFFFFFF - 7);
 
+  __m512i switch_256lanes_mask = _mm512_setr_epi64(4,
+                                                   5,
+                                                   6,
+                                                   7,
+                                                   1,
+                                                   2,
+                                                   3,
+                                                   4);
   __m512i permute_mask = _mm512_setr_epi64(0 | 4,
                                            0 | 5,
                                            0 | 6,
@@ -210,105 +423,9 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
         v_rclv[j] = _mm512_load_pd(t_rclv + j * ELEM_PER_AVX515_REGISTER);
       }
 
-      for (j = 0; j < states_padded; j += ELEM_PER_AVX515_REGISTER) {
-        /* point to the four rows of the eigenvecs matrix */
-        const double *lm0 = ct_inv_eigenvecs;
-        const double *lm1 = lm0 + states_padded;
-        const double *lm2 = lm1 + states_padded;
-        const double *lm3 = lm2 + states_padded;
-        const double *lm4 = lm3 + states_padded;
-        const double *lm5 = lm4 + states_padded;
-        const double *lm6 = lm5 + states_padded;
-        const double *lm7 = lm6 + states_padded;
-        ct_inv_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;
-
-        /* point to the four rows of the inv_eigenvecs matrix */
-        const double *rm0 = c_eigenvecs;
-        const double *rm1 = rm0 + states_padded;
-        const double *rm2 = rm1 + states_padded;
-        const double *rm3 = rm2 + states_padded;
-        const double *rm4 = rm3 + states_padded;
-        const double *rm5 = rm4 + states_padded;
-        const double *rm6 = rm5 + states_padded;
-        const double *rm7 = rm6 + states_padded;
-        c_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;
-
-        __m512d v_lterm0 = _mm512_setzero_pd();
-        __m512d v_rterm0 = _mm512_setzero_pd();
-        __m512d v_lterm1 = _mm512_setzero_pd();
-        __m512d v_rterm1 = _mm512_setzero_pd();
-        __m512d v_lterm2 = _mm512_setzero_pd();
-        __m512d v_rterm2 = _mm512_setzero_pd();
-        __m512d v_lterm3 = _mm512_setzero_pd();
-        __m512d v_rterm3 = _mm512_setzero_pd();
-        __m512d v_lterm4 = _mm512_setzero_pd();
-        __m512d v_rterm4 = _mm512_setzero_pd();
-        __m512d v_lterm5 = _mm512_setzero_pd();
-        __m512d v_rterm5 = _mm512_setzero_pd();
-        __m512d v_lterm6 = _mm512_setzero_pd();
-        __m512d v_rterm6 = _mm512_setzero_pd();
-        __m512d v_lterm7 = _mm512_setzero_pd();
-        __m512d v_rterm7 = _mm512_setzero_pd();
-
-        __m512d v_mat;
-
-        /* iterate over quadruples of columns */
-        COMPUTE_II_QCOL(0, 0);
-        COMPUTE_II_QCOL(1, 8);
-        COMPUTE_II_QCOL(2, 16);
-
-        /* compute lefterm */
-        __m512d xmm0 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm0, v_lterm1),
-                                     _mm512_unpacklo_pd(v_lterm0, v_lterm1));
-        __m512d xmm1 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm2, v_lterm3),
-                                     _mm512_unpacklo_pd(v_lterm2, v_lterm3));
-        __m512d xmm2 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm4, v_lterm5),
-                                     _mm512_unpacklo_pd(v_lterm4, v_lterm5));
-        __m512d xmm3 = _mm512_add_pd(_mm512_unpackhi_pd(v_lterm6, v_lterm7),
-                                     _mm512_unpacklo_pd(v_lterm6, v_lterm7));
-
-        __m512d ymm0 = _mm512_add_pd(_mm512_permutex2var_pd(xmm0, permute_mask, xmm2),
-                                     _mm512_mask_blend_pd(0xF0, xmm0, xmm2));
-
-        __m512d ymm1 = _mm512_add_pd(_mm512_permutex2var_pd(xmm1, permute_mask, xmm3),
-                                     _mm512_mask_blend_pd(0xF0, xmm1, xmm3));
-
-        __m512d v_lefterm_sum = _mm512_add_pd(_mm512_permutex2var_pd(ymm0,
-                                                                     permute_mask_final_stage,
-                                                                     ymm1),
-                                              _mm512_mask_blend_pd(0xCC, ymm0, ymm1));
-
-        /* compute righterm */
-        xmm0 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm0, v_rterm1),
-                             _mm512_unpacklo_pd(v_rterm0, v_rterm1));
-        xmm1 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm2, v_rterm3),
-                             _mm512_unpacklo_pd(v_rterm2, v_rterm3));
-        xmm2 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm4, v_rterm5),
-                             _mm512_unpacklo_pd(v_rterm4, v_rterm5));
-        xmm3 = _mm512_add_pd(_mm512_unpackhi_pd(v_rterm6, v_rterm7),
-                             _mm512_unpacklo_pd(v_rterm6, v_rterm7));
-
-        ymm0 = _mm512_add_pd(_mm512_permutex2var_pd(xmm0, permute_mask, xmm2),
-                             _mm512_mask_blend_pd(0xF0, xmm0, xmm2));
-
-        ymm1 = _mm512_add_pd(_mm512_permutex2var_pd(xmm1, permute_mask, xmm3),
-                             _mm512_mask_blend_pd(0xF0, xmm1, xmm3));
-
-        __m512d v_righterm_sum = _mm512_add_pd(_mm512_permutex2var_pd(ymm0,
-                                                                      permute_mask_final_stage,
-                                                                      ymm1),
-                                               _mm512_mask_blend_pd(0xCC, ymm0, ymm1));
-
-        /* update sum */
-        __m512d v_prod = _mm512_mul_pd(v_lefterm_sum, v_righterm_sum);
-
-        /* apply per-rate scalers */
-        if (rate_scalings && rate_scalings[i] > 0) {
-          v_prod = _mm512_mul_pd(v_prod, v_scale_minlh[rate_scalings[i] - 1]);
-        }
-
-        _mm512_store_pd(sum + j, v_prod);
-      }
+      COMPUTE_II_QROW_8(0);
+      COMPUTE_II_QROW_8(8);
+      COMPUTE_II_QROW_4(16);
 
       t_lclv += states_padded;
       t_rclv += states_padded;
