@@ -51,11 +51,12 @@ SIMD_KERNELS=
 
 if HAVE_AVX512F
  SIMD_KERNELS+=libsimd_avx512f.la
- libsimd_avx512f_la_CFLAGS=$(AM_CFLAGS) $(AVX512FFLAGS)
+ libsimd_avx512f_la_CFLAGS=$(AM_CFLAGS) $(AVX2FLAGS) $(AVX512FFLAGS)
  libsimd_avx512f_la_SOURCES=\
  core_derivatives_avx512f.c \
  core_partials_avx512f.c \
- core_pmatrix_avx512f.c
+ core_pmatrix_avx512f.c \
+ core_likelihood_avx512f.c
 endif
 
 if HAVE_AVX2
