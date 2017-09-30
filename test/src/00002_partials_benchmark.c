@@ -31,7 +31,7 @@ unsigned int params_indices[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 
 int main(int argc, char *argv[]) {
   unsigned int j;
-  unsigned int n_sites = 15;
+  unsigned int n_sites = 1000;
   unsigned int n_tips = 5;
   double rate_cats[N_CAT_GAMMA];
   pll_operation_t *operations;
@@ -101,16 +101,16 @@ int main(int argc, char *argv[]) {
 
   const char *ref_seq = "PIGLRVTLRRDRMWI";
 
-  size_t align_size = 1000 * strlen(ref_seq);
+  size_t align_size = n_sites * strlen(ref_seq);
   size_t align_seqs = 5;
 
-  char** align = calloc(align_seqs, sizeof(char*));
+  char **align = calloc(align_seqs, sizeof(char *));
 
-  srand (time(NULL));
+  srand(time(NULL));
   return_val = PLL_SUCCESS;
   for (size_t i = 0; i < align_seqs; i++) {
     align[i] = calloc(align_size + 1, sizeof(char));
-    for(size_t k = 0; k < align_size; k++) {
+    for (size_t k = 0; k < align_size; k++) {
       align[i][k] = ref_seq[rand() % strlen(ref_seq)];
     }
     return_val &= pll_set_tip_states(partition, i, pll_map_aa,
@@ -123,8 +123,8 @@ int main(int argc, char *argv[]) {
   pll_set_category_rates(partition, rate_cats);
 
   pll_update_prob_matrices(partition, params_indices, matrix_indices, branch_lengths, 4);
-  for(int i = 0; i < 100000; i++)
-  pll_update_partials(partition, operations, 3);
+  for (int i = 0; i < 100*00; i++)
+    pll_update_partials(partition, operations, 3);
 
   for (j = 0; j < 4; ++j) {
     printf("[%d] P-matrix for branch length %f\n", j + 1, branch_lengths[j]);
@@ -144,10 +144,10 @@ int main(int argc, char *argv[]) {
   free(persite_lnl);
   free(operations);
 
-  /*for (size_t i = 0; i < align_seqs; i++) {
+  for (size_t i = 0; i < align_seqs; i++) {
     free(align[i]);
   }
-  free(align);*/
+  free(align);
 
   return (0);
 }

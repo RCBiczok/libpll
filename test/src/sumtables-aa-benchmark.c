@@ -29,6 +29,7 @@
     rate categories and 9 branches ranging from 0.1 to 90.
  */
 #include "common.h"
+#include <time.h>
 
 #define NUM_ALPHAS   3
 #define NUM_BRANCHES 9
@@ -45,7 +46,7 @@ unsigned int params_indices[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 
 int main(int argc, char *argv[]) {
   unsigned int i, j, k, p;
-  unsigned int n_sites = 20;
+  unsigned int n_sites = 1000;
   unsigned int n_tips = 5;
   pll_operation_t *operations;
   double *sumtable;
@@ -101,11 +102,11 @@ int main(int argc, char *argv[]) {
             N_STATES_AA, /* number of states */
             n_sites,     /* sequence length */
             1,           /* different rate parameters */
-            2 * n_tips - 3,  /* probability matrices */
+            2 * n_tips - 3, /* probability matrices */
             n_cat_gamma[k], /* gamma categories */
-            0,           /* scale buffers */
-            attributes
-    );          /* attributes */
+            0,              /* scale buffers */
+            attributes      /* attributes */
+    );
 
     if (!partition) {
       printf("Fail creating partition");
@@ -128,15 +129,29 @@ int main(int argc, char *argv[]) {
     pll_set_frequencies(partition, 0, pll_aa_freqs_dayhoff);
     pll_set_subst_params(partition, 0, pll_aa_rates_dayhoff);
 
-    if (!
-            (pll_set_tip_states(partition, 0, pll_map_aa, "PIGLRVTLRRDRMWIPIGLR") &&
-             pll_set_tip_states(partition, 1, pll_map_aa, "IQGMDITIVT-----IQGMD") &&
-             pll_set_tip_states(partition, 2, pll_map_aa, "--AFALLQKIGMPFE--AFA") &&
-             pll_set_tip_states(partition, 3, pll_map_aa, "MDISIVT------TAMDISI") &&
-             pll_set_tip_states(partition, 4, pll_map_aa, "GLSEQTVFHEIDQDKGLSEQ"))) {
-      printf("Fail setting tip states\n");
-      return -1;
+    int return_val;
+
+    const char *ref_seq = "PIGLRVTLRRDRMWI";
+
+    size_t align_size = n_sites * strlen(ref_seq);
+    size_t align_seqs = 5;
+
+    char **align = calloc(align_seqs, sizeof(char *));
+
+    srand(time(NULL));
+
+    return_val = PLL_SUCCESS;
+    for (size_t i = 0; i < align_seqs; i++) {
+      align[i] = calloc(align_size + 1, sizeof(char));
+      for (size_t k = 0; k < align_size; k++) {
+        align[i][k] = ref_seq[rand() % strlen(ref_seq)];
+      }
+      return_val &= pll_set_tip_states(partition, i, pll_map_aa,
+                                       align[i]);
     }
+
+    if (!return_val)
+      fatal("Error setting tip states");
 
     for (i = 0; i < NUM_ALPHAS; ++i) {
       for (p = 0; p < NUM_PINV; ++p) {
@@ -166,9 +181,13 @@ int main(int argc, char *argv[]) {
 
     pll_aligned_free(sumtable);
     pll_partition_destroy(partition);
+
+    for (size_t i = 0; i < align_seqs; i++) {
+      free(align[i]);
+    }
+    free(align);
   }
 
   free(operations);
-
   return (0);
 }
