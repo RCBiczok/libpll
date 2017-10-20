@@ -39,7 +39,7 @@
 #define FLOAT_PRECISION 4
 
 static double alpha[NUM_ALPHAS] = {0.1, 0.75, 1.5};
-static double pinvar[NUM_PINV] = {0.0, 0.3, 0.6, 0.9};
+static double pinvar[NUM_PINV] = {0.0, 0.3, 0.5, 0.6};
 static unsigned int n_cat_gamma[NUM_CATS] = {1, 2, 4};
 unsigned int params_indices[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static double testbranches[NUM_BRANCHES] = {0.1, 0.2, 0.5, 0.9, 1.5, 5, 10, 50, 90};
