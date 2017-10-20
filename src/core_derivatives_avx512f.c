@@ -63,7 +63,7 @@ v_mat    = _mm512_load_pd(lm0 + offset); \
 v_lterm0 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm0); \
 v_mat    = _mm512_load_pd(rm0 + offset); \
 v_rterm0 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm0); \
- \
+\
 /* row 1 */ \
 v_mat    = _mm512_load_pd(lm1 + offset); \
 v_lterm1 = _mm512_fmadd_pd(v_mat, v_lclv[q], v_lterm1); \
