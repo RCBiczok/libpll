@@ -287,7 +287,7 @@ double pll_core_edge_loglikelihood_ii_avx512f(unsigned int states,
           row4 += ELEM_PER_AVX515_REGISTER;
 
           /* row 5 */
-          __m512d v_row5 = _mm512_load_pd(row4);
+          __m512d v_row5 = _mm512_load_pd(row5);
           xmm5 = _mm512_fmadd_pd(v_row5, v_clvc, xmm5);
           row5 += ELEM_PER_AVX515_REGISTER;
 
