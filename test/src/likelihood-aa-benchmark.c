@@ -20,13 +20,9 @@
 */
 
 /*
-    sumtables-aa-benchmark.c
+    derivatives-aa-benchmark.c
 
-    This test is analogous to `sumtables` but using the 20 states for amino acid sequences
-
-    The derivatives are computed twice at an inner edge and at a tip edge
-    using 3 different alphas, 4 proportion of invariant sites, 3 sets of
-    rate categories and 9 branches ranging from 0.1 to 90.
+    Benchmark version of derivatives-aa.c
  */
 #include "common.h"
 #include <time.h>
@@ -102,11 +98,11 @@ int main(int argc, char *argv[]) {
             N_STATES_AA, /* number of states */
             n_sites,     /* sequence length */
             1,           /* different rate parameters */
-            2 * n_tips - 3, /* probability matrices */
+            2 * n_tips - 3,  /* probability matrices */
             n_cat_gamma[k], /* gamma categories */
-            0,              /* scale buffers */
-            attributes      /* attributes */
-    );
+            0,           /* scale buffers */
+            attributes
+    );          /* attributes */
 
     if (!partition) {
       printf("Fail creating partition");
@@ -172,10 +168,17 @@ int main(int argc, char *argv[]) {
 
         pll_update_prob_matrices(partition, params_indices, matrix_indices, branch_lengths, 4);
         pll_update_partials(partition, operations, 3);
+
+
         for (int i = 0; i < 1000; i++)
-          pll_update_sumtable(partition, 6, 7,
-                              PLL_SCALE_BUFFER_NONE, PLL_SCALE_BUFFER_NONE,
-                              params_indices, sumtable);
+          pll_compute_edge_loglikelihood(partition,
+                                         6,
+                                         PLL_SCALE_BUFFER_NONE,
+                                         7,
+                                         PLL_SCALE_BUFFER_NONE,
+                                         0,
+                                         params_indices,
+                                         NULL);
       }
     }
 
@@ -187,6 +190,7 @@ int main(int argc, char *argv[]) {
     }
     free(align);
   }
+
 
   free(operations);
   return (0);
