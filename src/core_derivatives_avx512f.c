@@ -21,6 +21,18 @@
 #include <limits.h>
 #include "pll.h"
 
+void print_512d(const __m512d v) {
+  const double *val = (const double *) &v;
+  printf("% .2e % .2e % .2e % .2e % .2e % .2e % .2e % .2e\n",
+         val[7], val[6], val[5], val[4], val[3], val[2], val[1], val[0]);
+}
+
+void print_512d_half(const __m512d v, size_t half) {
+  const double *val = (const double *) &v;
+  printf("% .2e % .2e % .2e % .2e\n",
+         val[3 + 4 * half], val[2 + 4 * half], val[1 + 4 * half], val[0 + 4 * half]);
+}
+
 inline double reduce_add_pd(const __m512d zmm) {
   __m256d low = _mm512_castpd512_pd256(zmm);
   __m256d high = _mm512_extractf64x4_pd(zmm, 1);
@@ -286,6 +298,7 @@ v_rterm7 = _mm512_fmadd_pd(v_mat, v_rclv[q], v_rterm7);
                                                                                            \
   _mm512_store_pd(sum + j, v_prod);}                                                       \
 
+
 PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
                                                          unsigned int rate_cats,
                                                          const double *clvp,
@@ -299,15 +312,21 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
                                                          unsigned int attrib) {
   unsigned int i, j, k, n;
 
-  /* build sumtable */
-  double *sum = sumtable;
-
   const double *t_lclv = clvp;
   const double *t_rclv = clvc;
   double *t_freqs;
 
   unsigned int states = 20;
   unsigned int states_padded = (states + 7) & (0xFFFFFFFF - 7);
+
+  /* build sumtable */
+  //double *sum = sumtable;
+  unsigned int sites_padded = (sites + ELEM_PER_AVX515_REGISTER - 1) & (0xFFFFFFFF - ELEM_PER_AVX515_REGISTER + 1);
+  size_t sumtable_size = sites * rate_cats * states_padded * sizeof(double);
+  double *sumtable_copy = pll_aligned_alloc(sumtable_size, PLL_ALIGNMENT_AVX512F);
+  memset(sumtable_copy, 0, sumtable_size);
+
+  double *sum = sumtable_copy;
 
   __m512i switch_256lanes_mask = _mm512_setr_epi64(4,
                                                    5,
@@ -437,6 +456,31 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
   pll_aligned_free(tt_eigenvecs);
   if (rate_scalings)
     free(rate_scalings);
+
+
+
+  for (n = 0; n < sites_padded / ELEM_PER_AVX515_REGISTER; n++) {
+    for (i = 0; i < rate_cats; i++) {
+      for (j = 0; j < states; j++) {
+        for (k = 0; k < ELEM_PER_AVX515_REGISTER; k++) {
+          if(n * ELEM_PER_AVX515_REGISTER + k >= states) {
+            sumtable[n * rate_cats * states * ELEM_PER_AVX515_REGISTER +
+                     i * states * ELEM_PER_AVX515_REGISTER +
+                     j * ELEM_PER_AVX515_REGISTER + k] = 0;
+            continue;
+          }
+          sumtable[n * rate_cats * states * ELEM_PER_AVX515_REGISTER +
+                   i * states * ELEM_PER_AVX515_REGISTER +
+                   j * ELEM_PER_AVX515_REGISTER + k]
+                  = sumtable_copy[(n * ELEM_PER_AVX515_REGISTER + k) * rate_cats * states_padded +
+                                  i * states_padded +
+                                  j];
+        }
+      }
+    }
+  }
+
+  pll_aligned_free(sumtable_copy);
 
   return PLL_SUCCESS;
 }
@@ -593,7 +637,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
     const double *ct_inv_eigenvecs = tt_inv_eigenvecs;
     for (i = 0; i < rate_cats; ++i) {
       for (j = 0; j < states_padded; j += ELEM_PER_AVX515_REGISTER) {
-        /* point to the four rows of the eigenvecs matrix */
+        /* point to the eight rows of the eigenvecs matrix */
         const double *em0 = c_eigenvecs;
         const double *em1 = em0 + states_padded;
         const double *em2 = em1 + states_padded;
@@ -604,7 +648,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
         const double *em7 = em6 + states_padded;
         c_eigenvecs += ELEM_PER_AVX515_REGISTER * states_padded;
 
-        /* point to the four rows of the inv_eigenvecs matrix */
+        /* point to the eight rows of the inv_eigenvecs matrix */
         const double *im0 = ct_inv_eigenvecs;
         const double *im1 = im0 + states_padded;
         const double *im2 = im1 + states_padded;
@@ -796,239 +840,109 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
                                             const double *diagptable,
                                             double *d_f,
                                             double *dd_f) {
-  unsigned int i, j, k, n;
-  unsigned int span_padded = rate_cats * states_padded;
+  /* vectors for accumulating LH, 1st and 2nd derivatives */
+  __m512d v_df = _mm512_setzero_pd();
+  __m512d v_ddf = _mm512_setzero_pd();
+  __m512d v_all1 = _mm512_set1_pd(1.);
 
-  double *t_diagp = NULL;
-  const double *diagp_start = NULL;
-  double *invar_lk = NULL;
-
-  /* check for special cases in which we can save some computation later on */
-  int use_pinv = 0;
-  int eq_weights = 1;
-  for (i = 0; i < rate_cats; ++i) {
-    /* check if proportion of invariant site is used */
-    use_pinv |= (prop_invar[i] > 0);
-
-    /* check if rate weights are all equal (e.g. GAMMA) */
-    eq_weights &= (rate_weights[i] == rate_weights[0]);
-  }
-
-  if (use_pinv) {
-    invar_lk = (double *) pll_aligned_alloc(rate_cats * states * sizeof(double),
-                                            PLL_ALIGNMENT_AVX512F);
-
-    if (!invar_lk) {
-      pll_errno = PLL_ERROR_MEM_ALLOC;
-      snprintf(pll_errmsg, 200, "Unable to allocate enough memory.");
-      return PLL_FAILURE;
-    }
-
-    /* pre-compute invariant site likelihoods*/
-    for (i = 0; i < states; ++i) {
-      for (j = 0; j < rate_cats; ++j) {
-        invar_lk[i * rate_cats + j] = freqs[j][i] * prop_invar[j];
-      }
-    }
-  }
-
-  if (states == 4) {
-    //TODO: cannot use this, not guaranteed to be aligned for AVX512
-    //diagp_start = diagptable;
-    double *diagptable_copy = (double *) pll_aligned_alloc(
-            rate_cats * states * 4 * sizeof(double),
-            PLL_ALIGNMENT_AVX512F);
-    memcpy(diagptable_copy, diagptable, rate_cats * states * 4 * sizeof(double));
-    diagp_start = diagptable_copy;
-  } else {
-    t_diagp = (double *) pll_aligned_alloc(
-            3 * span_padded * sizeof(double),
-            PLL_ALIGNMENT_AVX512F);
-
-    if (!t_diagp) {
-      pll_errno = PLL_ERROR_MEM_ALLOC;
-      snprintf(pll_errmsg, 200, "Unable to allocate enough memory.");
-      return PLL_FAILURE;
-    }
-
-    memset(t_diagp, 0, 3 * span_padded * sizeof(double));
-
-    /* transpose diagptable */
-    for (i = 0; i < rate_cats; ++i) {
-      for (j = 0; j < states; ++j) {
-        for (k = 0; k < 3; ++k) {
-          t_diagp[i * states_padded * 3 + k * states_padded + j] =
-                  diagptable[i * states * 4 + j * 4 + k];
-        }
-      }
-    }
-
-    diagp_start = t_diagp;
-  }
-
-  /* here we will temporary store per-site LH, 1st and 2nd derivatives */
-  double site_lk[16] __attribute__(( aligned ( PLL_ALIGNMENT_AVX512F )));
-
-  /* vectors for accumulating 1st and 2nd derivatives */
-  __m256d v_df = _mm256_setzero_pd();
-  __m256d v_ddf = _mm256_setzero_pd();
-  __m256d v_all1 = _mm256_set1_pd(1.);
+  __m512d site_lk[3];
 
   const double *sum = sumtable;
   const int *invariant_ptr = invariant;
-  unsigned int offset = 0;
-  for (n = 0; n < ef_sites; ++n) {
-    const double *diagp = diagp_start;
 
-    __m256d v_sitelk = _mm256_setzero_pd();
-    for (i = 0; i < rate_cats; ++i) {
-      __m256d v_cat_sitelk = _mm256_setzero_pd();
+  for (unsigned int n = 0;
+       n < ef_sites;
+       n += ELEM_PER_AVX515_REGISTER, invariant_ptr += ELEM_PER_AVX515_REGISTER) {
+    site_lk[0] = _mm512_setzero_pd();
+    site_lk[1] = _mm512_setzero_pd();
+    site_lk[2] = _mm512_setzero_pd();
 
-      if (states == 4) {
-        /* use unrolled loop */
-        __m256d v_diagp = _mm256_load_pd(diagp);
-        __m256d v_sum = _mm256_set1_pd(sum[0]);
-        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+    const double *diagp = diagptable;
 
-        v_diagp = _mm256_load_pd(diagp + 4);
-        v_sum = _mm256_set1_pd(sum[1]);
-        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+    for (unsigned int i = 0; i < rate_cats; ++i) {
 
-        v_diagp = _mm256_load_pd(diagp + 8);
-        v_sum = _mm256_set1_pd(sum[2]);
-        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
+      __m512d v_cat_sitelk[3];
+      v_cat_sitelk[0] = _mm512_setzero_pd();
+      v_cat_sitelk[1] = _mm512_setzero_pd();
+      v_cat_sitelk[2] = _mm512_setzero_pd();
 
-        v_diagp = _mm256_load_pd(diagp + 12);
-        v_sum = _mm256_set1_pd(sum[3]);
-        v_cat_sitelk = _mm256_fmadd_pd(v_sum, v_diagp, v_cat_sitelk);
-
-        diagp += 16;
-        sum += 4;
-      } else {
-        /* pointer to 3 "rows" of diagp with values for lk0, lk1 and lk2 */
-        const double *r0 = diagp;
-        const double *r1 = r0 + states_padded;
-        const double *r2 = r1 + states_padded;
-
-        /* unroll 1st iteration to save a couple of adds */
+      for (unsigned int j = 0; j < states; j++, diagp += 4, sum += ELEM_PER_AVX515_REGISTER) {
         __m512d v_sum = _mm512_load_pd(sum);
-        __m512d v_diagp = _mm512_load_pd(r0);
-        __m512d v_lk0 = _mm512_mul_pd(v_sum, v_diagp);
+        __m512d v_diagp;
 
-        v_diagp = _mm512_load_pd(r1);
-        __m512d v_lk1 = _mm512_mul_pd(v_sum, v_diagp);
+        v_diagp = _mm512_set1_pd(diagp[0]);
+        v_cat_sitelk[0] = _mm512_fmadd_pd(v_sum, v_diagp, v_cat_sitelk[0]);
 
-        v_diagp = _mm512_load_pd(r2);
-        __m512d v_lk2 = _mm512_mul_pd(v_sum, v_diagp);
+        v_diagp = _mm512_set1_pd(diagp[1]);
+        v_cat_sitelk[1] = _mm512_fmadd_pd(v_sum, v_diagp, v_cat_sitelk[1]);
 
-        /* iterate over remaining states (if any) */
-        for (j = ELEM_PER_AVX515_REGISTER; j < states_padded; j += ELEM_PER_AVX515_REGISTER) {
-          v_sum = _mm512_load_pd(sum + j);
-          v_diagp = _mm512_load_pd(r0 + j);
-          v_lk0 = _mm512_fmadd_pd(v_sum, v_diagp, v_lk0);
-
-          v_diagp = _mm512_load_pd(r1 + j);
-          v_lk1 = _mm512_fmadd_pd(v_sum, v_diagp, v_lk1);
-
-          v_diagp = _mm512_load_pd(r2 + j);
-          v_lk2 = _mm512_fmadd_pd(v_sum, v_diagp, v_lk2);
-        }
-
-        /* reduce lk0 (=LH), lk1 (=1st deriv) and v_lk2 (=2nd deriv) */
-        double lk0 = reduce_add_pd(v_lk0);
-        double lk1 = reduce_add_pd(v_lk1);
-        double lk2 = reduce_add_pd(v_lk2);
-
-        v_cat_sitelk = _mm256_setr_pd(lk0, lk1, lk2, 0.);
-
-        sum += states_padded;
-        diagp += 3 * states_padded;
+        v_diagp = _mm512_set1_pd(diagp[2]);
+        v_cat_sitelk[2] = _mm512_fmadd_pd(v_sum, v_diagp, v_cat_sitelk[2]);
       }
 
       /* account for invariant sites */
-      if (use_pinv && prop_invar[i] > 0) {
-        __m256d v_inv_prop = _mm256_set1_pd(1. - prop_invar[i]);
-        v_cat_sitelk = _mm256_mul_pd(v_cat_sitelk, v_inv_prop);
+      double t_prop_invar = prop_invar[i];
+      if (t_prop_invar > 0) {
 
-        if (invariant && *invariant_ptr != -1) {
-          double site_invar_lk = invar_lk[(*invariant_ptr) * rate_cats + i];
-          __m256d v_inv_lk = _mm256_setr_pd(site_invar_lk, 0., 0., 0.);
-          v_cat_sitelk = _mm256_add_pd(v_cat_sitelk, v_inv_lk);
-        }
+        //TODO Vectorize?
+        double inv_site_lk_0 =
+                (n + 0 >= ef_sites || invariant_ptr[0] == -1) ? 0 : freqs[i][invariant_ptr[0]] * t_prop_invar;
+        double inv_site_lk_1 =
+                (n + 1 >= ef_sites || invariant_ptr[1] == -1) ? 0 : freqs[i][invariant_ptr[1]] * t_prop_invar;
+        double inv_site_lk_2 =
+                (n + 2 >= ef_sites || invariant_ptr[2] == -1) ? 0 : freqs[i][invariant_ptr[2]] * t_prop_invar;
+        double inv_site_lk_3 =
+                (n + 3 >= ef_sites || invariant_ptr[3] == -1) ? 0 : freqs[i][invariant_ptr[3]] * t_prop_invar;
+        double inv_site_lk_4 =
+                (n + 4 >= ef_sites || invariant_ptr[4] == -1) ? 0 : freqs[i][invariant_ptr[4]] * t_prop_invar;
+        double inv_site_lk_5 =
+                (n + 5 >= ef_sites || invariant_ptr[5] == -1) ? 0 : freqs[i][invariant_ptr[5]] * t_prop_invar;
+        double inv_site_lk_6 =
+                (n + 6 >= ef_sites || invariant_ptr[6] == -1) ? 0 : freqs[i][invariant_ptr[6]] * t_prop_invar;
+        double inv_site_lk_7 =
+                (n + 7 >= ef_sites || invariant_ptr[7] == -1) ? 0 : freqs[i][invariant_ptr[7]] * t_prop_invar;
+
+        __m512d v_inv_site_lk = _mm512_setr_pd(inv_site_lk_0,
+                                               inv_site_lk_1,
+                                               inv_site_lk_2,
+                                               inv_site_lk_3,
+                                               inv_site_lk_4,
+                                               inv_site_lk_5,
+                                               inv_site_lk_6,
+                                               inv_site_lk_7);
+
+        __m512d v_prop_invar = _mm512_set1_pd(1. - t_prop_invar);
+
+        v_cat_sitelk[0] = _mm512_add_pd(_mm512_mul_pd(v_cat_sitelk[0], v_prop_invar), v_inv_site_lk);
+        v_cat_sitelk[1] = _mm512_mul_pd(v_cat_sitelk[1], v_prop_invar);
+        v_cat_sitelk[2] = _mm512_mul_pd(v_cat_sitelk[2], v_prop_invar);
       }
 
       /* apply rate category weights */
-      if (eq_weights) {
-        /* all rate weights are equal -> no multiplication needed */
-        v_sitelk = _mm256_add_pd(v_sitelk, v_cat_sitelk);
-      } else {
-        __m256d v_weight = _mm256_set1_pd(rate_weights[i]);
-        v_sitelk = _mm256_fmadd_pd(v_cat_sitelk, v_weight, v_sitelk);
-      }
+      __m512d v_weight = _mm512_set1_pd(rate_weights[i]);
+      site_lk[0] = _mm512_fmadd_pd(v_cat_sitelk[0], v_weight, site_lk[0]);
+      site_lk[1] = _mm512_fmadd_pd(v_cat_sitelk[1], v_weight, site_lk[1]);
+      site_lk[2] = _mm512_fmadd_pd(v_cat_sitelk[2], v_weight, site_lk[2]);
     }
 
-    _mm256_store_pd(&site_lk[offset], v_sitelk);
-    offset += 4;
+    /* build derivatives */
+    __m512d v_recip0 = _mm512_div_pd(v_all1, site_lk[0]);
+    __m512d v_deriv1 = _mm512_mul_pd(site_lk[1], v_recip0);
+    __m512d v_deriv2 = _mm512_sub_pd(_mm512_mul_pd(v_deriv1, v_deriv1),
+                                     _mm512_mul_pd(site_lk[2], v_recip0));
 
-    invariant_ptr++;
-
-    /* build derivatives for 4 adjacent sites at once */
-    if (offset == 16) {
-      __m256d v_term0 = _mm256_setr_pd(site_lk[0], site_lk[4],
-                                       site_lk[8], site_lk[12]);
-      __m256d v_term1 = _mm256_setr_pd(site_lk[1], site_lk[5],
-                                       site_lk[9], site_lk[13]);
-      __m256d v_term2 = _mm256_setr_pd(site_lk[2], site_lk[6],
-                                       site_lk[10], site_lk[14]);
-
-      __m256d v_recip0 = _mm256_div_pd(v_all1, v_term0);
-      __m256d v_deriv1 = _mm256_mul_pd(v_term1, v_recip0);
-      __m256d v_deriv2 = _mm256_sub_pd(_mm256_mul_pd(v_deriv1, v_deriv1),
-                                       _mm256_mul_pd(v_term2, v_recip0));
-
-      /* assumption: no zero weights */
-      if ((pattern_weights[n - 3] | pattern_weights[n - 2] |
-           pattern_weights[n - 1] | pattern_weights[n]) == 1) {
-        /* all 4 weights are 1 -> no multiplication needed */
-        v_df = _mm256_sub_pd(v_df, v_deriv1);
-        v_ddf = _mm256_add_pd(v_ddf, v_deriv2);
-      } else {
-        __m256d v_patw = _mm256_setr_pd(pattern_weights[n - 3], pattern_weights[n - 2],
-                                        pattern_weights[n - 1], pattern_weights[n]);
-
-        v_df = _mm256_fnmadd_pd(v_deriv1, v_patw, v_df);
-        v_ddf = _mm256_fmadd_pd(v_deriv2, v_patw, v_ddf);
-      }
-      offset = 0;
+    /* eliminates nan values on padded states */
+    if (n + ELEM_PER_AVX515_REGISTER >= ef_sites) {
+      v_deriv1 = _mm512_insertf64x4(v_deriv1, _mm256_setzero_pd(), 1);
+      v_deriv2 = _mm512_insertf64x4(v_deriv2, _mm256_setzero_pd(), 1);
     }
+
+    v_df = _mm512_fnmadd_pd(v_deriv1, _mm512_set1_pd(pattern_weights[n]), v_df);
+    v_ddf = _mm512_fmadd_pd(v_deriv2, _mm512_set1_pd(pattern_weights[n]), v_ddf);
   }
 
-  *d_f = *dd_f = 0.;
-
-  /* remainder loop */
-  while (offset > 0) {
-    offset -= 4;
-    n--;
-    double deriv1 = (-site_lk[offset + 1] / site_lk[offset]);
-    double deriv2 = (deriv1 * deriv1 - (site_lk[offset + 2] / site_lk[offset]));
-    *d_f += pattern_weights[n] * deriv1;
-    *dd_f += pattern_weights[n] * deriv2;
-  }
-
-  assert(offset == 0 && n == ef_sites / 4 * 4);
-
-  /* reduce 1st derivative */
-  _mm256_store_pd(site_lk, v_df);
-  *d_f += site_lk[0] + site_lk[1] + site_lk[2] + site_lk[3];
-
-  /* reduce 2nd derivative */
-  _mm256_store_pd(site_lk, v_ddf);
-  *dd_f += site_lk[0] + site_lk[1] + site_lk[2] + site_lk[3];
-
-  if (t_diagp)
-    pll_aligned_free(t_diagp);
-  if (invar_lk)
-    pll_aligned_free(invar_lk);
+  *d_f = reduce_add_pd(v_df);
+  *dd_f = reduce_add_pd(v_ddf);
 
   return PLL_SUCCESS;
 }
