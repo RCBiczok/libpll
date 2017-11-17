@@ -21,18 +21,6 @@
 #include <limits.h>
 #include "pll.h"
 
-void print_512d(const __m512d v) {
-  const double *val = (const double *) &v;
-  printf("% .2e % .2e % .2e % .2e % .2e % .2e % .2e % .2e\n",
-         val[7], val[6], val[5], val[4], val[3], val[2], val[1], val[0]);
-}
-
-void print_512d_half(const __m512d v, size_t half) {
-  const double *val = (const double *) &v;
-  printf("% .2e % .2e % .2e % .2e\n",
-         val[3 + 4 * half], val[2 + 4 * half], val[1 + 4 * half], val[0 + 4 * half]);
-}
-
 inline double reduce_add_pd(const __m512d zmm) {
   __m256d low = _mm512_castpd512_pd256(zmm);
   __m256d high = _mm512_extractf64x4_pd(zmm, 1);
@@ -616,6 +604,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx512f(unsigned int states,
 
   /* vectorized loop from update_sumtable() */
   for (n = 0; n < sites; n++) {
+
     /* compute per-rate scalers and obtain minimum value (within site) */
     if (per_rate_scaling) {
       min_scaler = UINT_MAX;
@@ -933,8 +922,10 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
 
     /* eliminates nan values on padded states */
     if (n + ELEM_PER_AVX515_REGISTER >= ef_sites) {
-      v_deriv1 = _mm512_insertf64x4(v_deriv1, _mm256_setzero_pd(), 1);
-      v_deriv2 = _mm512_insertf64x4(v_deriv2, _mm256_setzero_pd(), 1);
+      __mmask8 mask = _mm512_cmp_pd_mask(site_lk[0], _mm512_setzero_pd(), _CMP_EQ_UQ);
+
+      v_deriv1 = _mm512_maskz_expand_pd (mask, v_deriv1);
+      v_deriv2 = _mm512_maskz_expand_pd (mask, v_deriv2);
     }
 
     v_df = _mm512_fnmadd_pd(v_deriv1, _mm512_set1_pd(pattern_weights[n]), v_df);
