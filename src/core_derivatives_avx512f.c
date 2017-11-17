@@ -445,13 +445,11 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
   if (rate_scalings)
     free(rate_scalings);
 
-
-
   for (n = 0; n < sites_padded / ELEM_PER_AVX515_REGISTER; n++) {
     for (i = 0; i < rate_cats; i++) {
       for (j = 0; j < states; j++) {
         for (k = 0; k < ELEM_PER_AVX515_REGISTER; k++) {
-          if(n * ELEM_PER_AVX515_REGISTER + k >= states) {
+          if(n * ELEM_PER_AVX515_REGISTER + k >= sites) {
             sumtable[n * rate_cats * states * ELEM_PER_AVX515_REGISTER +
                      i * states * ELEM_PER_AVX515_REGISTER +
                      j * ELEM_PER_AVX515_REGISTER + k] = 0;
@@ -921,8 +919,8 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
                                      _mm512_mul_pd(site_lk[2], v_recip0));
 
     /* eliminates nan values on padded states */
-    if (n + ELEM_PER_AVX515_REGISTER >= ef_sites) {
-      __mmask8 mask = _mm512_cmp_pd_mask(site_lk[0], _mm512_setzero_pd(), _CMP_EQ_UQ);
+    if (n + ELEM_PER_AVX515_REGISTER > ef_sites) {
+      __mmask8 mask = _mm512_cmp_pd_mask(site_lk[0], _mm512_setzero_pd(), _CMP_NEQ_UQ);
 
       v_deriv1 = _mm512_maskz_expand_pd (mask, v_deriv1);
       v_deriv2 = _mm512_maskz_expand_pd (mask, v_deriv2);
