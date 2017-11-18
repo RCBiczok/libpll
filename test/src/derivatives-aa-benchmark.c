@@ -94,6 +94,11 @@ int main(int argc, char *argv[]) {
 
   clock_t begin = clock();
 
+  float total_init_secs = 0.f;
+  float total_edge_loglikelihood_secs = 0.f;
+  float total_sumtable_secs = 0.f;
+  float total_derivetive_secs = 0.f;
+
   for (k = 0; k < NUM_CATS; ++k) {
     clock_t calc_init = clock();
 
@@ -186,6 +191,7 @@ int main(int argc, char *argv[]) {
 
         clock_t edge_loglikelihood_time = clock();
         float init_secs = (float) (edge_loglikelihood_time - init_time) / CLOCKS_PER_SEC;
+        total_init_secs += init_secs;
         printf("      Init time:               %f\n", init_secs);
 
         pll_compute_edge_loglikelihood(partition,
@@ -199,6 +205,7 @@ int main(int argc, char *argv[]) {
 
         clock_t sumtable_time = clock();
         float edge_loglikelihood_secs = (float) (sumtable_time - edge_loglikelihood_time) / CLOCKS_PER_SEC;
+        total_edge_loglikelihood_secs += edge_loglikelihood_secs;
         printf("      Edge loglikelihood time: %f\n", edge_loglikelihood_secs);
 
         pll_update_sumtable(partition, 6, 7,
@@ -206,7 +213,9 @@ int main(int argc, char *argv[]) {
                             params_indices, sumtable);
 
         clock_t derivetive_time = clock();
+        total_edge_loglikelihood_secs += edge_loglikelihood_secs;
         float sumtable_secs = (float) (derivetive_time - sumtable_time) / CLOCKS_PER_SEC;
+        total_sumtable_secs += sumtable_secs;
         printf("      Sumtable time:           %f\n", sumtable_secs);
 
         for (b = 0; b < NUM_BRANCHES; ++b) {
@@ -221,6 +230,7 @@ int main(int argc, char *argv[]) {
 
         clock_t inner_loop_time = clock();
         float derivetive_secs = (float) (inner_loop_time - derivetive_time) / CLOCKS_PER_SEC;
+        total_derivetive_secs += derivetive_secs;
         printf("      Derivative time:         %f\n", derivetive_secs);
 
         float alpha_pinv_loop_secs = (float) (inner_loop_time - init_time) / CLOCKS_PER_SEC;
@@ -243,6 +253,12 @@ int main(int argc, char *argv[]) {
 
   clock_t end = clock();
   float total_secs = (float) (end - begin) / CLOCKS_PER_SEC;
+
+  printf("\n");
+  printf("Total inner loop init time: %f\n", total_init_secs);
+  printf("Total edge loglikelihood time: %f\n", total_edge_loglikelihood_secs);
+  printf("Total sumtable time: %f\n", total_sumtable_secs);
+  printf("Total derivative time: %f\n", total_derivetive_secs);
   printf("Total exec time: %f\n", total_secs);
 
   free(operations);

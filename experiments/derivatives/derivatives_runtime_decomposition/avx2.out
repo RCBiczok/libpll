@@ -1,226 +1,231 @@
 Outer loop with num cats: 1
-  Outer loop init time: 0.368603
+  Outer loop init time: 0.366310
    Inner loop with alpha: 0.100000, PINV, 0.000000)
-      Init time:               0.148907
-      Edge loglikelihood time: 0.073531
-      Sumtable time:           0.059081
-      Derivative time:         0.132500
-   Inner loop time:            0.414019
+      Init time:               0.151171
+      Edge loglikelihood time: 0.074750
+      Sumtable time:           0.059077
+      Derivative time:         0.132708
+   Inner loop time:            0.417706
    Inner loop with alpha: 0.100000, PINV, 0.300000)
-      Init time:               0.241734
-      Edge loglikelihood time: 0.075855
-      Sumtable time:           0.048982
-      Derivative time:         0.137918
-   Inner loop time:            0.504489
+      Init time:               0.242170
+      Edge loglikelihood time: 0.077440
+      Sumtable time:           0.049034
+      Derivative time:         0.137895
+   Inner loop time:            0.506539
    Inner loop with alpha: 0.100000, PINV, 0.500000)
-      Init time:               0.148328
-      Edge loglikelihood time: 0.075838
-      Sumtable time:           0.048965
-      Derivative time:         0.137972
-   Inner loop time:            0.411103
+      Init time:               0.148251
+      Edge loglikelihood time: 0.077544
+      Sumtable time:           0.048942
+      Derivative time:         0.138001
+   Inner loop time:            0.412738
    Inner loop with alpha: 0.100000, PINV, 0.600000)
-      Init time:               0.148610
-      Edge loglikelihood time: 0.075799
-      Sumtable time:           0.049044
-      Derivative time:         0.137906
-   Inner loop time:            0.411359
+      Init time:               0.151191
+      Edge loglikelihood time: 0.077457
+      Sumtable time:           0.049193
+      Derivative time:         0.137915
+   Inner loop time:            0.415756
    Inner loop with alpha: 0.750000, PINV, 0.000000)
-      Init time:               0.148319
-      Edge loglikelihood time: 0.073513
-      Sumtable time:           0.048984
-      Derivative time:         0.132100
-   Inner loop time:            0.402916
+      Init time:               0.148913
+      Edge loglikelihood time: 0.074724
+      Sumtable time:           0.049103
+      Derivative time:         0.132089
+   Inner loop time:            0.404829
    Inner loop with alpha: 0.750000, PINV, 0.300000)
-      Init time:               0.148431
-      Edge loglikelihood time: 0.075761
-      Sumtable time:           0.048954
-      Derivative time:         0.137914
-   Inner loop time:            0.411060
+      Init time:               0.148216
+      Edge loglikelihood time: 0.077457
+      Sumtable time:           0.048998
+      Derivative time:         0.137964
+   Inner loop time:            0.412635
    Inner loop with alpha: 0.750000, PINV, 0.500000)
-      Init time:               0.148332
-      Edge loglikelihood time: 0.075836
+      Init time:               0.149099
+      Edge loglikelihood time: 0.077508
+      Sumtable time:           0.049007
+      Derivative time:         0.137959
+   Inner loop time:            0.413573
+   Inner loop with alpha: 0.750000, PINV, 0.600000)
+      Init time:               0.148451
+      Edge loglikelihood time: 0.077534
+      Sumtable time:           0.048980
+      Derivative time:         0.137957
+   Inner loop time:            0.412922
+   Inner loop with alpha: 1.500000, PINV, 0.000000)
+      Init time:               0.148277
+      Edge loglikelihood time: 0.074820
+      Sumtable time:           0.048969
+      Derivative time:         0.132521
+   Inner loop time:            0.404587
+   Inner loop with alpha: 1.500000, PINV, 0.300000)
+      Init time:               0.149416
+      Edge loglikelihood time: 0.077469
+      Sumtable time:           0.049001
+      Derivative time:         0.137954
+   Inner loop time:            0.413840
+   Inner loop with alpha: 1.500000, PINV, 0.500000)
+      Init time:               0.148291
+      Edge loglikelihood time: 0.077513
+      Sumtable time:           0.048972
+      Derivative time:         0.137956
+   Inner loop time:            0.412732
+   Inner loop with alpha: 1.500000, PINV, 0.600000)
+      Init time:               0.148464
+      Edge loglikelihood time: 0.077467
       Sumtable time:           0.048997
-      Derivative time:         0.137978
-   Inner loop time:            0.411143
-   Inner loop with alpha: 0.750000, PINV, 0.600000)
-      Init time:               0.148263
-      Edge loglikelihood time: 0.075852
-      Sumtable time:           0.048992
-      Derivative time:         0.137947
-   Inner loop time:            0.411054
-   Inner loop with alpha: 1.500000, PINV, 0.000000)
-      Init time:               0.148316
-      Edge loglikelihood time: 0.073495
-      Sumtable time:           0.048987
-      Derivative time:         0.131910
-   Inner loop time:            0.402708
-   Inner loop with alpha: 1.500000, PINV, 0.300000)
-      Init time:               0.148344
-      Edge loglikelihood time: 0.075741
-      Sumtable time:           0.048973
-      Derivative time:         0.138045
-   Inner loop time:            0.411103
-   Inner loop with alpha: 1.500000, PINV, 0.500000)
-      Init time:               0.151243
-      Edge loglikelihood time: 0.075903
-      Sumtable time:           0.048989
-      Derivative time:         0.137961
-   Inner loop time:            0.414096
-   Inner loop with alpha: 1.500000, PINV, 0.600000)
-      Init time:               0.151815
-      Edge loglikelihood time: 0.075864
-      Sumtable time:           0.049369
-      Derivative time:         0.138007
-   Inner loop time:            0.415055
-Outer loop time: 5.020166
+      Derivative time:         0.137942
+   Inner loop time:            0.412870
+Outer loop time: 5.040785
 Outer loop with num cats: 2
-  Outer loop init time: 0.438728
+  Outer loop init time: 0.434542
    Inner loop with alpha: 0.100000, PINV, 0.000000)
-      Init time:               0.294190
-      Edge loglikelihood time: 0.114932
-      Sumtable time:           0.115750
-      Derivative time:         0.251468
-   Inner loop time:            0.776340
+      Init time:               0.294205
+      Edge loglikelihood time: 0.114907
+      Sumtable time:           0.115776
+      Derivative time:         0.253347
+   Inner loop time:            0.778235
    Inner loop with alpha: 0.100000, PINV, 0.300000)
-      Init time:               0.451074
-      Edge loglikelihood time: 0.117752
-      Sumtable time:           0.097804
-      Derivative time:         0.262106
-   Inner loop time:            0.928736
+      Init time:               0.449711
+      Edge loglikelihood time: 0.117690
+      Sumtable time:           0.097942
+      Derivative time:         0.261617
+   Inner loop time:            0.926960
    Inner loop with alpha: 0.100000, PINV, 0.500000)
-      Init time:               0.294370
-      Edge loglikelihood time: 0.117800
-      Sumtable time:           0.097900
-      Derivative time:         0.262092
-   Inner loop time:            0.772162
+      Init time:               0.294655
+      Edge loglikelihood time: 0.117725
+      Sumtable time:           0.097850
+      Derivative time:         0.261594
+   Inner loop time:            0.771824
    Inner loop with alpha: 0.100000, PINV, 0.600000)
-      Init time:               0.298032
-      Edge loglikelihood time: 0.117863
-      Sumtable time:           0.097804
-      Derivative time:         0.365979
-   Inner loop time:            0.879678
+      Init time:               0.294303
+      Edge loglikelihood time: 0.117930
+      Sumtable time:           0.097727
+      Derivative time:         0.364191
+   Inner loop time:            0.874151
    Inner loop with alpha: 0.750000, PINV, 0.000000)
-      Init time:               0.294566
-      Edge loglikelihood time: 0.115097
-      Sumtable time:           0.098014
-      Derivative time:         0.253139
-   Inner loop time:            0.760816
+      Init time:               0.294809
+      Edge loglikelihood time: 0.115003
+      Sumtable time:           0.098026
+      Derivative time:         0.252799
+   Inner loop time:            0.760637
    Inner loop with alpha: 0.750000, PINV, 0.300000)
-      Init time:               0.294133
-      Edge loglikelihood time: 0.118055
-      Sumtable time:           0.097841
-      Derivative time:         0.262376
-   Inner loop time:            0.772405
+      Init time:               0.297535
+      Edge loglikelihood time: 0.118237
+      Sumtable time:           0.098118
+      Derivative time:         0.261274
+   Inner loop time:            0.775164
    Inner loop with alpha: 0.750000, PINV, 0.500000)
-      Init time:               0.295351
-      Edge loglikelihood time: 0.118039
-      Sumtable time:           0.098244
-      Derivative time:         0.262384
-   Inner loop time:            0.774018
+      Init time:               0.298156
+      Edge loglikelihood time: 0.117999
+      Sumtable time:           0.097800
+      Derivative time:         0.261721
+   Inner loop time:            0.775676
    Inner loop with alpha: 0.750000, PINV, 0.600000)
-      Init time:               0.295440
-      Edge loglikelihood time: 0.118019
-      Sumtable time:           0.098066
-      Derivative time:         0.262515
-   Inner loop time:            0.774040
+      Init time:               0.296701
+      Edge loglikelihood time: 0.118171
+      Sumtable time:           0.097908
+      Derivative time:         0.261858
+   Inner loop time:            0.774638
    Inner loop with alpha: 1.500000, PINV, 0.000000)
-      Init time:               0.294401
-      Edge loglikelihood time: 0.115047
-      Sumtable time:           0.098133
-      Derivative time:         0.252936
-   Inner loop time:            0.760517
+      Init time:               0.297599
+      Edge loglikelihood time: 0.114938
+      Sumtable time:           0.097645
+      Derivative time:         0.251321
+   Inner loop time:            0.761503
    Inner loop with alpha: 1.500000, PINV, 0.300000)
-      Init time:               0.294105
-      Edge loglikelihood time: 0.117992
-      Sumtable time:           0.097707
-      Derivative time:         0.262171
-   Inner loop time:            0.771975
+      Init time:               0.298661
+      Edge loglikelihood time: 0.117976
+      Sumtable time:           0.097620
+      Derivative time:         0.263310
+   Inner loop time:            0.777567
    Inner loop with alpha: 1.500000, PINV, 0.500000)
-      Init time:               0.297359
-      Edge loglikelihood time: 0.118015
-      Sumtable time:           0.098288
-      Derivative time:         0.262345
-   Inner loop time:            0.776007
+      Init time:               0.297118
+      Edge loglikelihood time: 0.117934
+      Sumtable time:           0.097754
+      Derivative time:         0.261628
+   Inner loop time:            0.774434
    Inner loop with alpha: 1.500000, PINV, 0.600000)
-      Init time:               0.294233
-      Edge loglikelihood time: 0.118011
-      Sumtable time:           0.097958
-      Derivative time:         0.262759
-   Inner loop time:            0.772961
-Outer loop time: 9.519707
+      Init time:               0.298315
+      Edge loglikelihood time: 0.117904
+      Sumtable time:           0.097633
+      Derivative time:         0.260837
+   Inner loop time:            0.774689
+Outer loop time: 9.525536
 Outer loop with num cats: 4
-  Outer loop init time: 0.823485
+  Outer loop init time: 0.820939
    Inner loop with alpha: 0.100000, PINV, 0.000000)
-      Init time:               0.604341
-      Edge loglikelihood time: 0.195919
-      Sumtable time:           0.235702
-      Derivative time:         0.494963
-   Inner loop time:            1.530925
+      Init time:               0.597995
+      Edge loglikelihood time: 0.195927
+      Sumtable time:           0.235648
+      Derivative time:         0.494008
+   Inner loop time:            1.523578
    Inner loop with alpha: 0.100000, PINV, 0.300000)
-      Init time:               1.027161
-      Edge loglikelihood time: 0.196573
-      Sumtable time:           0.202011
-      Derivative time:         0.512902
-   Inner loop time:            1.938647
+      Init time:               1.033420
+      Edge loglikelihood time: 0.198529
+      Sumtable time:           0.196178
+      Derivative time:         0.507765
+   Inner loop time:            1.935892
    Inner loop with alpha: 0.100000, PINV, 0.500000)
-      Init time:               0.595125
-      Edge loglikelihood time: 0.197003
-      Sumtable time:           0.197527
-      Derivative time:         0.612858
-   Inner loop time:            1.602513
+      Init time:               0.600542
+      Edge loglikelihood time: 0.198867
+      Sumtable time:           0.200520
+      Derivative time:         0.611183
+   Inner loop time:            1.611112
    Inner loop with alpha: 0.100000, PINV, 0.600000)
-      Init time:               0.599049
-      Edge loglikelihood time: 0.196887
-      Sumtable time:           0.197395
-      Derivative time:         0.718301
-   Inner loop time:            1.711632
+      Init time:               0.603898
+      Edge loglikelihood time: 0.199322
+      Sumtable time:           0.199427
+      Derivative time:         0.713115
+   Inner loop time:            1.715762
    Inner loop with alpha: 0.750000, PINV, 0.000000)
-      Init time:               0.597670
-      Edge loglikelihood time: 0.195936
-      Sumtable time:           0.197684
-      Derivative time:         0.498154
-   Inner loop time:            1.489444
+      Init time:               0.599690
+      Edge loglikelihood time: 0.195935
+      Sumtable time:           0.198493
+      Derivative time:         0.496047
+   Inner loop time:            1.490165
    Inner loop with alpha: 0.750000, PINV, 0.300000)
-      Init time:               0.596093
-      Edge loglikelihood time: 0.197274
-      Sumtable time:           0.197375
-      Derivative time:         0.613791
-   Inner loop time:            1.604533
+      Init time:               0.602600
+      Edge loglikelihood time: 0.199621
+      Sumtable time:           0.200593
+      Derivative time:         0.614378
+   Inner loop time:            1.617192
    Inner loop with alpha: 0.750000, PINV, 0.500000)
-      Init time:               0.599878
-      Edge loglikelihood time: 0.197208
-      Sumtable time:           0.197345
-      Derivative time:         0.615096
-   Inner loop time:            1.609527
+      Init time:               0.598555
+      Edge loglikelihood time: 0.199585
+      Sumtable time:           0.196758
+      Derivative time:         0.615201
+   Inner loop time:            1.610099
    Inner loop with alpha: 0.750000, PINV, 0.600000)
-      Init time:               0.599988
-      Edge loglikelihood time: 0.197135
-      Sumtable time:           0.202302
-      Derivative time:         0.613460
-   Inner loop time:            1.612885
+      Init time:               0.597739
+      Edge loglikelihood time: 0.199662
+      Sumtable time:           0.197174
+      Derivative time:         0.615061
+   Inner loop time:            1.609636
    Inner loop with alpha: 1.500000, PINV, 0.000000)
-      Init time:               0.597517
-      Edge loglikelihood time: 0.195921
-      Sumtable time:           0.197720
-      Derivative time:         0.498103
-   Inner loop time:            1.489261
+      Init time:               0.603186
+      Edge loglikelihood time: 0.195951
+      Sumtable time:           0.196103
+      Derivative time:         0.495150
+   Inner loop time:            1.490390
    Inner loop with alpha: 1.500000, PINV, 0.300000)
-      Init time:               0.598787
-      Edge loglikelihood time: 0.197216
-      Sumtable time:           0.197839
-      Derivative time:         0.513894
-   Inner loop time:            1.507736
+      Init time:               0.595786
+      Edge loglikelihood time: 0.200120
+      Sumtable time:           0.196660
+      Derivative time:         0.513116
+   Inner loop time:            1.505682
    Inner loop with alpha: 1.500000, PINV, 0.500000)
-      Init time:               0.596237
-      Edge loglikelihood time: 0.197082
-      Sumtable time:           0.199271
-      Derivative time:         0.511946
-   Inner loop time:            1.504536
+      Init time:               0.603199
+      Edge loglikelihood time: 0.199298
+      Sumtable time:           0.196129
+      Derivative time:         0.510197
+   Inner loop time:            1.508823
    Inner loop with alpha: 1.500000, PINV, 0.600000)
-      Init time:               0.598975
-      Edge loglikelihood time: 0.197097
-      Sumtable time:           0.197540
-      Derivative time:         0.614662
-   Inner loop time:            1.608274
-Outer loop time: 19.209969
-Total exec time: 35.401379
+      Init time:               0.602769
+      Edge loglikelihood time: 0.199450
+      Sumtable time:           0.196225
+      Derivative time:         0.610248
+   Inner loop time:            1.608692
+Outer loop time: 19.227089
+
+Total inner loop init time: 13.233057
+Total edge loglikelihood time: 9.420730
+Total sumtable time: 4.199980
+Total derivative time: 11.649826
+Total exec time: 35.435837
