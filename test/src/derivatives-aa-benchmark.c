@@ -44,7 +44,7 @@ static double testbranches[NUM_BRANCHES] = {0.1, 0.2, 0.5, 0.9, 1.5, 5, 10, 50, 
 int main(int argc, char *argv[]) {
   unsigned int i, j, k, b, p;
   double d_f, dd_f;
-  unsigned int n_sites = 1000;
+  unsigned int n_sites = 1000000  ;
   unsigned int n_tips = 5;
   pll_operation_t *operations;
   double *sumtable;
@@ -92,7 +92,13 @@ int main(int argc, char *argv[]) {
   /* check attributes */
   unsigned int attributes = get_attributes(argc, argv);
 
+  clock_t begin = clock();
+
   for (k = 0; k < NUM_CATS; ++k) {
+    clock_t calc_init = clock();
+
+    printf("Outer loop with num cats: %d\n", n_cat_gamma[k]);
+
     pll_partition_t *partition;
     partition = pll_partition_create(
             n_tips,      /* numer of tips */
@@ -130,21 +136,17 @@ int main(int argc, char *argv[]) {
     pll_set_frequencies(partition, 0, pll_aa_freqs_dayhoff);
     pll_set_subst_params(partition, 0, pll_aa_rates_dayhoff);
 
-    int return_val;
-
     const char *ref_seq = "PIGLRVTLRRDRMWI";
-
-    size_t align_size = n_sites * strlen(ref_seq);
     size_t align_seqs = 5;
 
     char **align = calloc(align_seqs, sizeof(char *));
 
     srand(time(NULL));
 
-    return_val = PLL_SUCCESS;
+    int return_val = PLL_SUCCESS;
     for (size_t i = 0; i < align_seqs; i++) {
-      align[i] = calloc(align_size + 1, sizeof(char));
-      for (size_t k = 0; k < align_size; k++) {
+      align[i] = calloc(n_sites + 1, sizeof(char));
+      for (size_t k = 0; k < n_sites; k++) {
         align[i][k] = ref_seq[rand() % strlen(ref_seq)];
       }
       return_val &= pll_set_tip_states(partition, i, pll_map_aa,
@@ -154,8 +156,16 @@ int main(int argc, char *argv[]) {
     if (!return_val)
       fatal("Error setting tip states");
 
+    clock_t loop_begin = clock();
+    float cat_init_secs = (float) (loop_begin - calc_init) / CLOCKS_PER_SEC;
+    printf("  Outer loop init time: %f\n", cat_init_secs);
+
     for (i = 0; i < NUM_ALPHAS; ++i) {
       for (p = 0; p < NUM_PINV; ++p) {
+
+        printf("   Inner loop with alpha: %f, PINV, %f)\n", alpha[i], pinvar[p]);
+
+        clock_t init_time = clock();
 
         double *rate_cats = (double *) malloc(n_cat_gamma[k] * sizeof(double));
 
@@ -174,6 +184,9 @@ int main(int argc, char *argv[]) {
         pll_update_prob_matrices(partition, params_indices, matrix_indices, branch_lengths, 4);
         pll_update_partials(partition, operations, 3);
 
+        clock_t edge_loglikelihood_time = clock();
+        float init_secs = (float) (edge_loglikelihood_time - init_time) / CLOCKS_PER_SEC;
+        printf("      Init time:               %f\n", init_secs);
 
         pll_compute_edge_loglikelihood(partition,
                                        6,
@@ -184,22 +197,40 @@ int main(int argc, char *argv[]) {
                                        params_indices,
                                        NULL);
 
+        clock_t sumtable_time = clock();
+        float edge_loglikelihood_secs = (float) (sumtable_time - edge_loglikelihood_time) / CLOCKS_PER_SEC;
+        printf("      Edge loglikelihood time: %f\n", edge_loglikelihood_secs);
+
         pll_update_sumtable(partition, 6, 7,
                             PLL_SCALE_BUFFER_NONE, PLL_SCALE_BUFFER_NONE,
                             params_indices, sumtable);
 
-        for (int i = 0; i < 1000; i++)
-          for (b = 0; b < NUM_BRANCHES; ++b) {
-            pll_compute_likelihood_derivatives(partition,
-                                               PLL_SCALE_BUFFER_NONE,
-                                               PLL_SCALE_BUFFER_NONE,
-                                               testbranches[b],
-                                               params_indices,
-                                               sumtable,
-                                               &d_f, &dd_f);
-          }
+        clock_t derivetive_time = clock();
+        float sumtable_secs = (float) (derivetive_time - sumtable_time) / CLOCKS_PER_SEC;
+        printf("      Sumtable time:           %f\n", sumtable_secs);
+
+        for (b = 0; b < NUM_BRANCHES; ++b) {
+          pll_compute_likelihood_derivatives(partition,
+                                             PLL_SCALE_BUFFER_NONE,
+                                             PLL_SCALE_BUFFER_NONE,
+                                             testbranches[b],
+                                             params_indices,
+                                             sumtable,
+                                             &d_f, &dd_f);
+        }
+
+        clock_t inner_loop_time = clock();
+        float derivetive_secs = (float) (inner_loop_time - derivetive_time) / CLOCKS_PER_SEC;
+        printf("      Derivative time:         %f\n", derivetive_secs);
+
+        float alpha_pinv_loop_secs = (float) (inner_loop_time - init_time) / CLOCKS_PER_SEC;
+        printf("   Inner loop time:            %f\n", alpha_pinv_loop_secs);
       }
     }
+
+    clock_t loop_end = clock();
+    float loop_secs = (float) (loop_end - loop_begin) / CLOCKS_PER_SEC;
+    printf("Outer loop time: %f\n", loop_secs);
 
     pll_aligned_free(sumtable);
     pll_partition_destroy(partition);
@@ -210,6 +241,9 @@ int main(int argc, char *argv[]) {
     free(align);
   }
 
+  clock_t end = clock();
+  float total_secs = (float) (end - begin) / CLOCKS_PER_SEC;
+  printf("Total exec time: %f\n", total_secs);
 
   free(operations);
   return (0);
