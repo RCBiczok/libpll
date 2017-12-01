@@ -1,0 +1,17 @@
+-r
+/home/hpc/pr63lo/di56sad2/rudolf/profile_avx512
+--target=host
+--itt-config=frame
+--stack-stitching
+--collector=perf
+--no-stack
+--data-limit-mb=500
+--disk-space-limit=100
+--mrte-type=java
+--event-config=CPU_CLK_UNHALTED.THREAD:sa=13000000,CPU_CLK_UNHALTED.REF_TSC:sa=13000000,INST_RETIRED.ANY:sa=13000000
+--sample-after-multiplier=1.0
+--mrte-mode=auto
+--stack-size=1024
+--
+./libpll/test/obj/sumtables-aa-benchmark
+avx512f

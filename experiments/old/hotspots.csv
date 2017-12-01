@@ -1,0 +1,24 @@
+Function,CPU Time,CPU Time:Effective Time,CPU Time:Effective Time:Idle,CPU Time:Effective Time:Poor,CPU Time:Effective Time:Ok,CPU Time:Effective Time:Ideal,CPU Time:Effective Time:Over,CPU Time:Spin Time,CPU Time:Overhead Time,Instructions Retired,CPI Rate,CPU Frequency Ratio,Module,Function (Full),Source File,Start Address
+pll_core_update_sumtable_ii_20x20_avx512f,164.951037,164.951037,0.020046,164.930991,0.0,0.0,0.0,0.0,0.0,259974000000,0.946745,1.150453,libpll.so.0.0.0,pll_core_update_sumtable_ii_20x20_avx512f,core_derivatives_avx512f.c,0x3bc30
+[Outside any known module],1.533542,1.533542,0.020046,1.513496,0.0,0.0,0.0,0.0,0.0,260000000,9.300000,1.215686,[Unknown],[Outside any known module],[Unknown],0x0
+__intel_avx_rep_memset,0.511181,0.511181,0.0,0.511181,0.0,0.0,0.0,0.0,0.0,299000000,2.782609,1.254902,libintlc.so.5,__intel_avx_rep_memset,[Unknown],0x44000
+_int_free,0.270625,0.270625,0.0,0.270625,0.0,0.0,0.0,0.0,0.0,299000000,1.695652,1.444444,libc-2.22.so,_int_free,[Unknown],0x77dc0
+malloc_consolidate,0.270625,0.270625,0.0,0.270625,0.0,0.0,0.0,0.0,0.0,156000000,2.416667,1.074074,libc-2.22.so,malloc_consolidate,[Unknown],0x77890
+_int_malloc,0.260602,0.260602,0.0,0.260602,0.0,0.0,0.0,0.0,0.0,130000000,2.800000,1.076923,libc-2.22.so,_int_malloc,[Unknown],0x79220
+free,0.200463,0.200463,0.0,0.200463,0.0,0.0,0.0,0.0,0.0,26000000,16.500000,1.650000,libc-2.22.so,free,[Unknown],0x7b9a0
+pll_update_sumtable,0.180417,0.180417,0.0,0.180417,0.0,0.0,0.0,0.0,0.0,0,,1.611111,libpll.so.0.0.0,pll_update_sumtable,derivatives.c,0x1af90
+sumtable_innerinner,0.140324,0.140324,0.0,0.140324,0.0,0.0,0.0,0.0,0.0,26000000,9.500000,1.357143,libpll.so.0.0.0,sumtable_innerinner,derivatives.c,0x1b3ce
+pll_aligned_free,0.120278,0.120278,0.0,0.120278,0.0,0.0,0.0,0.0,0.0,0,,1.333333,libpll.so.0.0.0,pll_aligned_free,pll.c,0x14480
+__libc_malloc,0.100232,0.100232,0.0,0.100232,0.0,0.0,0.0,0.0,0.0,104000000,1.375000,1.100000,libc-2.22.so,__libc_malloc,[Unknown],0x7b3d0
+pll_core_update_sumtable_ii,0.100232,0.100232,0.0,0.100232,0.0,0.0,0.0,0.0,0.0,0,,1.000000,libpll.so.0.0.0,pll_core_update_sumtable_ii,core_derivatives.c,0x1f600
+_int_memalign,0.060139,0.060139,0.0,0.060139,0.0,0.0,0.0,0.0,0.0,52000000,1.500000,1.000000,libc-2.22.so,_int_memalign,[Unknown],0x79e50
+_mid_memalign,0.050116,0.050116,0.0,0.050116,0.0,0.0,0.0,0.0,0.0,26000000,6.000000,2.400000,libc-2.22.so,_mid_memalign,[Unknown],0x7b770
+main,0.040093,0.040093,0.0,0.040093,0.0,0.0,0.0,0.0,0.0,0,,2.250000,sumtables-aa-benchmark,main,sumtables-aa-benchmark.c,0x4012c0
+pll_core_update_sumtable_ii_avx512f,0.040093,0.040093,0.0,0.040093,0.0,0.0,0.0,0.0,0.0,0,,0.750000,libpll.so.0.0.0,pll_core_update_sumtable_ii_avx512f,core_derivatives_avx512f.c,0x39f80
+pll_core_update_partial_ii_20x20_avx512f,0.030069,0.030069,0.0,0.030069,0.0,0.0,0.0,0.0,0.0,65000000,1.800000,3.000000,libpll.so.0.0.0,pll_core_update_partial_ii_20x20_avx512f,core_partials_avx512f.c,0x3f1e0
+posix_memalign,0.030069,0.030069,0.0,0.030069,0.0,0.0,0.0,0.0,0.0,13000000,4.000000,1.333333,libc-2.22.so,posix_memalign,[Unknown],0x7d3f0
+[Import thunk __intel_avx_rep_memset],0.020046,0.020046,0.0,0.020046,0.0,0.0,0.0,0.0,0.0,0,,0.500000,libpll.so.0.0.0,[Import thunk __intel_avx_rep_memset],[Unknown],0x9ee0
+pll_aligned_alloc,0.020046,0.020046,0.0,0.020046,0.0,0.0,0.0,0.0,0.0,0,,3.000000,libpll.so.0.0.0,pll_aligned_alloc,pll.c,0x14140
+open_verify,0.010023,0.010023,0.010023,0.0,0.0,0.0,0.0,0.0,0.0,0,0.0,0.0,ld-2.22.so,open_verify,[Unknown],0x5210
+pll_core_update_partial_ii,0.010023,0.010023,0.0,0.010023,0.0,0.0,0.0,0.0,0.0,0,0.0,0.0,libpll.so.0.0.0,pll_core_update_partial_ii,core_partials.c,0x24550
+random,0.010023,0.010023,0.0,0.010023,0.0,0.0,0.0,0.0,0.0,0,0.0,0.0,libc-2.22.so,random,[Unknown],0x37b50
