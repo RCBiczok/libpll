@@ -29,7 +29,7 @@
 
 #define NUM_BRANCHES 9
 #define N_STATES_AA 20
-#define N_CATEGORIES 80
+#define N_CATEGORIES 4
 
 #define FLOAT_PRECISION 4
 
@@ -39,7 +39,7 @@ static double testbranches[NUM_BRANCHES] = {0.1, 0.2, 0.5, 0.9, 1.5, 5, 10, 50, 
 int main(int argc, char *argv[]) {
   unsigned int j, b;
   double d_f, dd_f;
-  unsigned int n_sites = 10000000;
+  unsigned int n_sites = 1000000;
   unsigned int n_tips = 5;
   pll_operation_t *operations;
   double *sumtable;
@@ -183,6 +183,7 @@ int main(int argc, char *argv[]) {
   clock_t sumtable_time = clock();
   float edge_loglikelihood_secs = (float) (sumtable_time - edge_loglikelihood_time) / CLOCKS_PER_SEC;
   printf("Edge loglikelihood time:       %f\n", edge_loglikelihood_secs);
+
   pll_update_sumtable(partition, 6, 7,
                       PLL_SCALE_BUFFER_NONE, PLL_SCALE_BUFFER_NONE,
                       params_indices, sumtable);
