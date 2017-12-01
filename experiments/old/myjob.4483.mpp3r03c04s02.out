@@ -1,0 +1,55 @@
+ERROR: Unable to locate a modulefile for 'os_extension/devel'
+amplxe: Warning: Access to /proc/kallsyms file is limited. Consider changing /proc/sys/kernel/kptr_restrict to 0 to enable resolution of OS kernel and kernel modules symbols.
+amplxe: Warning: To profile kernel modules during the session, make sure they are available in the /lib/modules/kernel_version/ location.
+amplxe: Warning: Consider reducing possible collection overhead by setting the /proc/sys/kernel/perf_event_paranoid value to 0 (or less).
+amplxe: Collection started. To stop the collection, either press CTRL-C or enter from another console window: amplxe-cl -r /home/hpc/pr63lo/di56sad2/rudolf/profile_avx512 -command stop.
+amplxe: Collection stopped.
+amplxe: Using result path `/home/hpc/pr63lo/di56sad2/rudolf/profile_avx512'
+amplxe: Executing actions  0 %                                                 amplxe: Executing actions  0 % Finalizing results                              amplxe: Executing actions  0 % Finalizing the result                           amplxe: Executing actions  0 % Clearing the database                           amplxe: Executing actions  7 % Clearing the database                           amplxe: Executing actions  7 % Loading raw data to the database                amplxe: Executing actions  7 % Loading 'systemcollector-71499-mpp3r03c04s02.sc'amplxe: Executing actions 12 % Loading 'systemcollector-71499-mpp3r03c04s02.sc'amplxe: Executing actions 12 % Loading '71508.perf' file                       amplxe: Executing actions 12 % Updating precomputed scalar metrics             amplxe: Executing actions 14 % Updating precomputed scalar metrics             amplxe: Executing actions 14 % Processing profile metrics and debug informationamplxe: Executing actions 19 % Processing profile metrics and debug informationamplxe: Executing actions 19 % Setting data model parameters                   amplxe: Executing actions 19 % Resolving module symbols                        amplxe: Executing actions 19 % Resolving information for dangling locations    amplxe: Executing actions 19 % Resolving information for `ld-2.22.so'          amplxe: Executing actions 19 % Resolving information for `libc-2.22.so'        
+amplxe: Warning: Cannot locate debugging symbols for file `/lib64/libc-2.22.so'.
+amplxe: Warning: Cannot locate debugging symbols for file `/lib64/ld-2.22.so'.
+amplxe: Executing actions 19 % Resolving information for `sumtables-aa-benchmaramplxe: Executing actions 19 % Resolving information for `libintlc.so.5'       amplxe: Executing actions 19 % Resolving information for `libpll.so.0.0.0'     amplxe: Executing actions 20 % Resolving information for `libpll.so.0.0.0'     
+amplxe: Warning: Cannot locate debugging symbols for file `/lrz/mnt/sys.x86_sles12/intel/studio2017_u4/compilers_and_libraries_2017.4.196/linux/compiler/lib/intel64_lin/libintlc.so.5'.
+amplxe: Executing actions 21 % Resolving information for `libpll.so.0.0.0'     amplxe: Executing actions 22 % Resolving information for `libpll.so.0.0.0'     amplxe: Executing actions 22 % Resolving bottom user stack information         amplxe: Executing actions 23 % Resolving bottom user stack information         amplxe: Executing actions 23 % Resolving thread name information               amplxe: Executing actions 24 % Resolving thread name information               amplxe: Executing actions 24 % Resolving call target names for dynamic code    amplxe: Executing actions 25 % Resolving call target names for dynamic code    amplxe: Executing actions 26 % Resolving call target names for dynamic code    amplxe: Executing actions 26 % Processing profile metrics and debug informationamplxe: Executing actions 27 % Processing profile metrics and debug informationamplxe: Executing actions 28 % Processing profile metrics and debug informationamplxe: Executing actions 29 % Processing profile metrics and debug informationamplxe: Executing actions 30 % Processing profile metrics and debug informationamplxe: Executing actions 30 % Setting data model parameters                   amplxe: Executing actions 30 % Precomputing frequently used data               amplxe: Executing actions 30 % Precomputing frequently used data               amplxe: Executing actions 31 % Precomputing frequently used data               amplxe: Executing actions 32 % Precomputing frequently used data               amplxe: Executing actions 33 % Precomputing frequently used data               amplxe: Executing actions 34 % Precomputing frequently used data               amplxe: Executing actions 35 % Precomputing frequently used data               amplxe: Executing actions 36 % Precomputing frequently used data               amplxe: Executing actions 36 % Updating precomputed scalar metrics             amplxe: Executing actions 37 % Updating precomputed scalar metrics             amplxe: Executing actions 37 % Discarding redundant overtime data              amplxe: Executing actions 39 % Discarding redundant overtime data              amplxe: Executing actions 39 % Saving the result                               amplxe: Executing actions 41 % Saving the result                               amplxe: Executing actions 42 % Saving the result                               amplxe: Executing actions 49 % Saving the result                               amplxe: Executing actions 50 % Saving the result                               amplxe: Executing actions 50 % Generating a report                             amplxe: Executing actions 50 % Setting data model parameters                   amplxe: Executing actions 75 % Setting data model parameters                   amplxe: Executing actions 75 % Generating a report                             amplxe: Executing actions 100 % Generating a report                            amplxe: Executing actions 100 % done                                           
+
+Collection and Platform Info
+----------------------------
+Parameter                 profile_avx512                                                                                                                                                                      
+------------------------  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Application Command Line  ./libpll/test/obj/sumtables-aa-benchmark "avx512f"                                                                                                                                  
+Operating System          4.4.74-92.35-default NAME="SLES"
+VERSION="12-SP2"
+VERSION_ID="12.2"
+PRETTY_NAME="SUSE Linux Enterprise Server 12 SP2"
+ID="sles"
+ANSI_COLOR="0;32"
+CPE_NAME="cpe:/o:suse:sles:12:sp2"
+Computer Name             mpp3r03c04s02                                                                                                                                                                       
+Result Size               15477307                                                                                                                                                                            
+Collection start time     15:44:37 12/10/2017 UTC                                                                                                                                                             
+Collection stop time      15:47:27 12/10/2017 UTC                                                                                                                                                             
+
+CPU
+---
+Parameter          profile_avx512                               
+-----------------  ---------------------------------------------
+Name               Intel(R) Processor code named Knights Landing
+Frequency          1296996999                                   
+Logical CPU Count  256                                          
+
+Summary
+-------
+Elapsed Time:       169.850
+CPU Time:           168.960
+Average CPU Usage:  0.999  
+CPI Rate:           0.967  
+
+Event summary
+-------------
+Hardware Event Type       Hardware Event Count:Self  Hardware Event Sample Count:Self  Events Per Sample
+------------------------  -------------------------  --------------------------------  -----------------
+CPU_CLK_UNHALTED.THREAD                252850000000                             19450  13000000         
+CPU_CLK_UNHALTED.REF_TSC               219141000000                             16857  13000000         
+INST_RETIRED.ANY                       261430000000                             20110  13000000         
+amplxe: Using result path `/home/hpc/pr63lo/di56sad2/rudolf/profile_avx512'
+amplxe: Executing actions  0 %                                                 amplxe: Executing actions  0 % Finalizing results                              amplxe: Executing actions 50 % Finalizing results                              amplxe: Executing actions 50 % Generating a report                             amplxe: Executing actions 50 % Setting data model parameters                   amplxe: Executing actions 75 % Setting data model parameters                   amplxe: Executing actions 75 % Generating a report                             amplxe: Executing actions 100 % Generating a report                            amplxe: Executing actions 100 % done                                           
