@@ -449,7 +449,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
     for (i = 0; i < rate_cats; i++) {
       for (j = 0; j < states; j++) {
         for (k = 0; k < ELEM_PER_AVX515_REGISTER; k++) {
-          if(n * ELEM_PER_AVX515_REGISTER + k >= sites) {
+          if (n * ELEM_PER_AVX515_REGISTER + k >= sites) {
             sumtable[n * rate_cats * states * ELEM_PER_AVX515_REGISTER +
                      i * states * ELEM_PER_AVX515_REGISTER +
                      j * ELEM_PER_AVX515_REGISTER + k] = 0;
@@ -837,6 +837,29 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
   const double *sum = sumtable;
   const int *invariant_ptr = invariant;
 
+  double *t_diagp = (double *) pll_aligned_alloc(
+          ELEM_PER_AVX515_REGISTER * 3 * rate_cats * states * sizeof(double), PLL_ALIGNMENT_AVX512F);
+
+  if (!t_diagp) {
+    pll_errno = PLL_ERROR_MEM_ALLOC;
+    snprintf(pll_errmsg, 200, "Unable to allocate enough memory.");
+    return PLL_FAILURE;
+  }
+
+  /* transpose diagptable */
+  for (unsigned int i = 0; i < rate_cats; ++i) {
+    for (unsigned int j = 0; j < states; ++j) {
+      for (unsigned int k = 0; k < 3; ++k) {
+        __m512d v_diagp = _mm512_set1_pd(diagptable[i * states * 4 + j * 4 + k]);
+        _mm512_store_pd(t_diagp +
+                        i * ELEM_PER_AVX515_REGISTER * 3 * states +
+                        j * ELEM_PER_AVX515_REGISTER * 3 +
+                        k * ELEM_PER_AVX515_REGISTER,
+                        v_diagp);
+      }
+    }
+  }
+
   for (unsigned int n = 0;
        n < ef_sites;
        n += ELEM_PER_AVX515_REGISTER, invariant_ptr += ELEM_PER_AVX515_REGISTER) {
@@ -844,7 +867,7 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
     site_lk[1] = _mm512_setzero_pd();
     site_lk[2] = _mm512_setzero_pd();
 
-    const double *diagp = diagptable;
+    const double *diagp = t_diagp;
 
     for (unsigned int i = 0; i < rate_cats; ++i) {
 
@@ -853,17 +876,19 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
       v_cat_sitelk[1] = _mm512_setzero_pd();
       v_cat_sitelk[2] = _mm512_setzero_pd();
 
-      for (unsigned int j = 0; j < states; j++, diagp += 4, sum += ELEM_PER_AVX515_REGISTER) {
+      for (unsigned int j = 0;
+           j < states; j++, diagp += 3 * ELEM_PER_AVX515_REGISTER, sum += ELEM_PER_AVX515_REGISTER) {
         __m512d v_sum = _mm512_load_pd(sum);
         __m512d v_diagp;
 
-        v_diagp = _mm512_set1_pd(diagp[0]);
+        v_diagp = _mm512_load_pd(diagp);
+        //v_diagp = _mm512_set1_pd(diagp[0]);
         v_cat_sitelk[0] = _mm512_fmadd_pd(v_sum, v_diagp, v_cat_sitelk[0]);
 
-        v_diagp = _mm512_set1_pd(diagp[1]);
+        v_diagp = _mm512_load_pd(diagp + ELEM_PER_AVX515_REGISTER);
         v_cat_sitelk[1] = _mm512_fmadd_pd(v_sum, v_diagp, v_cat_sitelk[1]);
 
-        v_diagp = _mm512_set1_pd(diagp[2]);
+        v_diagp = _mm512_load_pd(diagp + 2 * ELEM_PER_AVX515_REGISTER);
         v_cat_sitelk[2] = _mm512_fmadd_pd(v_sum, v_diagp, v_cat_sitelk[2]);
       }
 
@@ -922,8 +947,8 @@ int pll_core_likelihood_derivatives_avx512f(unsigned int states,
     if (n + ELEM_PER_AVX515_REGISTER > ef_sites) {
       __mmask8 mask = _mm512_cmp_pd_mask(site_lk[0], _mm512_setzero_pd(), _CMP_NEQ_UQ);
 
-      v_deriv1 = _mm512_maskz_expand_pd (mask, v_deriv1);
-      v_deriv2 = _mm512_maskz_expand_pd (mask, v_deriv2);
+      v_deriv1 = _mm512_maskz_expand_pd(mask, v_deriv1);
+      v_deriv2 = _mm512_maskz_expand_pd(mask, v_deriv2);
     }
 
     v_df = _mm512_fnmadd_pd(v_deriv1, _mm512_set1_pd(pattern_weights[n]), v_df);
