@@ -310,7 +310,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
   /* build sumtable */
   //double *sum = sumtable;
   unsigned int sites_padded = (sites + ELEM_PER_AVX515_REGISTER - 1) & (0xFFFFFFFF - ELEM_PER_AVX515_REGISTER + 1);
-  size_t sumtable_size = sites * rate_cats * states_padded * sizeof(double);
+  size_t sumtable_size = sites_padded * rate_cats * states_padded * sizeof(double);
   double *sumtable_copy = pll_aligned_alloc(sumtable_size, PLL_ALIGNMENT_AVX512F);
   memset(sumtable_copy, 0, sumtable_size);
 
@@ -445,23 +445,36 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
   if (rate_scalings)
     free(rate_scalings);
 
-  for (n = 0; n < sites_padded / ELEM_PER_AVX515_REGISTER; n++) {
-    for (i = 0; i < rate_cats; i++) {
-      for (j = 0; j < states; j++) {
-        for (k = 0; k < ELEM_PER_AVX515_REGISTER; k++) {
-          if (n * ELEM_PER_AVX515_REGISTER + k >= sites) {
-            sumtable[n * rate_cats * states * ELEM_PER_AVX515_REGISTER +
-                     i * states * ELEM_PER_AVX515_REGISTER +
-                     j * ELEM_PER_AVX515_REGISTER + k] = 0;
-            continue;
-          }
-          sumtable[n * rate_cats * states * ELEM_PER_AVX515_REGISTER +
-                   i * states * ELEM_PER_AVX515_REGISTER +
-                   j * ELEM_PER_AVX515_REGISTER + k]
-                  = sumtable_copy[(n * ELEM_PER_AVX515_REGISTER + k) * rate_cats * states_padded +
-                                  i * states_padded +
-                                  j];
-        }
+  memset(sumtable, 0, sites_padded * rate_cats * states * sizeof(double));
+
+  unsigned int itr = 0;
+
+  unsigned int elems_per_site = rate_cats * states_padded;
+  unsigned int elems_per_site_octet = ELEM_PER_AVX515_REGISTER * elems_per_site;
+
+  double *site0 = sumtable_copy;
+  double *site1 = site0 + elems_per_site;
+  double *site2 = site1 + elems_per_site;
+  double *site3 = site2 + elems_per_site;
+  double *site4 = site3 + elems_per_site;
+  double *site5 = site4 + elems_per_site;
+  double *site6 = site5 + elems_per_site;
+  double *site7 = site6 + elems_per_site;
+
+  unsigned int octet_offset = 0;
+  for (n = 0; n < sites_padded / ELEM_PER_AVX515_REGISTER;
+       n++, octet_offset += elems_per_site_octet) {
+    unsigned int states_offset = 0;
+    for (i = 0; i < rate_cats; i++, states_offset += states_padded) {
+      for (j = 0; j < states; j++, itr += ELEM_PER_AVX515_REGISTER) {
+        sumtable[itr + 0] = site0[j + octet_offset + states_offset];
+        sumtable[itr + 1] = site1[j + octet_offset + states_offset];
+        sumtable[itr + 2] = site2[j + octet_offset + states_offset];
+        sumtable[itr + 3] = site3[j + octet_offset + states_offset];
+        sumtable[itr + 4] = site4[j + octet_offset + states_offset];
+        sumtable[itr + 5] = site5[j + octet_offset + states_offset];
+        sumtable[itr + 6] = site6[j + octet_offset + states_offset];
+        sumtable[itr + 7] = site7[j + octet_offset + states_offset];
       }
     }
   }
