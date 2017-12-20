@@ -23,27 +23,27 @@
 
 #define COMPUTE_II_QCOL(q, offset) \
 /* row 0 */ \
-v_mat    = _mm256_load_pd(lm0 + offset); \
+v_mat    = _mm256_load_pd(lm0 + (offset)); \
 v_lterm0 = _mm256_fmadd_pd(v_mat, v_lclv[q], v_lterm0); \
-v_mat    = _mm256_load_pd(rm0 + offset); \
+v_mat    = _mm256_load_pd(rm0 + (offset)); \
 v_rterm0 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm0); \
  \
 /* row 1 */ \
-v_mat    = _mm256_load_pd(lm1 + offset); \
+v_mat    = _mm256_load_pd(lm1 + (offset)); \
 v_lterm1 = _mm256_fmadd_pd(v_mat, v_lclv[q], v_lterm1); \
-v_mat    = _mm256_load_pd(rm1 + offset); \
+v_mat    = _mm256_load_pd(rm1 + (offset)); \
 v_rterm1 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm1); \
 \
 /* row 2 */ \
-v_mat    = _mm256_load_pd(lm2 + offset); \
+v_mat    = _mm256_load_pd(lm2 + (offset)); \
 v_lterm2 = _mm256_fmadd_pd(v_mat, v_lclv[q], v_lterm2); \
-v_mat    = _mm256_load_pd(rm2 + offset); \
+v_mat    = _mm256_load_pd(rm2 + (offset)); \
 v_rterm2 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm2); \
 \
 /* row 3 */ \
-v_mat    = _mm256_load_pd(lm3 + offset); \
+v_mat    = _mm256_load_pd(lm3 + (offset)); \
 v_lterm3 = _mm256_fmadd_pd(v_mat, v_lclv[q], v_lterm3); \
-v_mat    = _mm256_load_pd(rm3 + offset); \
+v_mat    = _mm256_load_pd(rm3 + (offset)); \
 v_rterm3 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm3);
 
 
@@ -488,19 +488,19 @@ PLL_EXPORT int pll_core_update_sumtable_ii_avx2(unsigned int states,
 
 #define COMPUTE_TI_QCOL(q, offset) \
 /* row 0 */ \
-v_mat    = _mm256_load_pd(rm0 + offset); \
+v_mat    = _mm256_load_pd(rm0 + (offset)); \
 v_rterm0 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm0); \
  \
 /* row 1 */ \
-v_mat    = _mm256_load_pd(rm1 + offset); \
+v_mat    = _mm256_load_pd(rm1 + (offset)); \
 v_rterm1 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm1); \
 \
 /* row 2 */ \
-v_mat    = _mm256_load_pd(rm2 + offset); \
+v_mat    = _mm256_load_pd(rm2 + (offset)); \
 v_rterm2 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm2); \
 \
 /* row 3 */ \
-v_mat    = _mm256_load_pd(rm3 + offset); \
+v_mat    = _mm256_load_pd(rm3 + (offset)); \
 v_rterm3 = _mm256_fmadd_pd(v_mat, v_rclv[q], v_rterm3);
 
 PLL_EXPORT int pll_core_update_sumtable_ti_20x20_avx2(unsigned int sites,
