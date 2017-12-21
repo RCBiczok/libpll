@@ -1,0 +1,7 @@
+Init time:                     3.143166
+Prob matrices & partials time: 2.389680
+Edge loglikelihood time:       1.256265
+Sumtable time:                 0.975344
+Derivetive time:               1.000747
+
+Total exec time:               8.802033
