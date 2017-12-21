@@ -129,7 +129,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
 
 /* padded eigenvecs */
   double *tt_eigenvecs = (double *) pll_aligned_alloc(
-          (states * states * rate_cats * ELEM_PER_AVX515_REGISTER) * sizeof(double),
+          (states * states * rate_cats) * sizeof(double),
           PLL_ALIGNMENT_AVX512F);
 
   if (!tt_eigenvecs) {
@@ -140,7 +140,7 @@ PLL_EXPORT int pll_core_update_sumtable_ii_20x20_avx512f(unsigned int sites,
 
 /* transposed padded inv_eigenvecs */
   double *tt_inv_eigenvecs = (double *) pll_aligned_alloc(
-          (states * states * rate_cats * ELEM_PER_AVX515_REGISTER) * sizeof(double),
+          (states * states * rate_cats) * sizeof(double),
           PLL_ALIGNMENT_AVX512F);
 
   if (!tt_inv_eigenvecs) {
