@@ -29,6 +29,10 @@ ylwrap
 m4
 man
 autom4te.cache
+.autotools
+.cproject
+.project
+.settings
 *.so.*
 *.a
 *.lai
